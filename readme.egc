@@ -1,0 +1,6 @@
+go get github.com/mattn/go-sqlite3
+go get github.com/seldonsmule/logmsg
+go get github.com/seldonsmule/restapi
+go get golang.org/x/crypto/ssh/terminal
+
+moved code over to bigmac on 12/21/2018
