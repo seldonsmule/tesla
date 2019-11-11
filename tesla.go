@@ -53,6 +53,7 @@ type MyTesla struct {
   vehicleList *restapi.Restapi
   singleVehicle *restapi.Restapi
   wake *restapi.Restapi
+  setchargelimit *restapi.Restapi
   nearbyCharging *restapi.Restapi
 
   dataRequestMap map[string]rest_cmds
@@ -66,6 +67,14 @@ func (et *MyTesla) authenticationURL(id string, sec string, email string, pwd st
                     sec,
                     email,
                     pwd)
+
+  return url
+
+}
+
+func (et *MyTesla) setchargelimitURL(id string) string{
+
+  url := fmt.Sprintf("%s/api/1/vehicles/%s/command/set_charge_limit", TESLA_API_URL, id)
 
   return url
 
@@ -247,7 +256,7 @@ func (et *MyTesla) RefreshToken(skipLogin bool) bool{
   et.refreshToken = r.GetValueString("refresh_token")
   created := r.GetValue("created_at")
   expires := r.GetValue("expires_in")
-  et.expiresTime = r.CastFloatToInt(created) + r.CastFloatToInt(expires)
+  et.expiresTime = restapi.CastFloatToInt(created) + restapi.CastFloatToInt(expires)
   et.AddOwner()
 
   return true
@@ -284,6 +293,47 @@ func (et *MyTesla) Wake(id string) bool{
 
   logmsg.Print(logmsg.Error,"wake failed")
   return false
+
+}
+
+func (et *MyTesla) SetChargeLimit(id string, percent_value string) bool{
+
+  //var stateStr string
+
+  et.Login() // the act of logging in will populate this info
+
+  et.setchargelimit = restapi.NewPost("setchargelimit", et.setchargelimitURL(id))
+
+  et.setchargelimit.SetBearerAccessToken(et.accessToken)
+  et.setchargelimit.HasInnerMap("response")
+
+  jsonstr := fmt.Sprintf("{\"percent\":\"%s\"}", percent_value)
+
+  et.setchargelimit.SetPostJson(jsonstr)
+
+  if(et.setchargelimit.Send()){
+    et.setchargelimit.Dump()
+  }else{
+    logmsg.Print(logmsg.Error,"setchargelimit"," Failed ", id)
+    return false
+  }
+
+/*
+  for et.wake.Send() {
+
+    stateStr = et.wake.GetValueString("state")
+
+    if(strings.Compare(stateStr,"online") == 0){
+      et.wake.Dump()
+      return true
+    }
+
+    logmsg.Print(logmsg.Warning,"Wake still waiting. State:", stateStr)
+
+  }
+*/
+
+  return true
 
 }
 
@@ -516,7 +566,7 @@ fmt.Println("owner status:", status)
   et.refreshToken = r.GetValueString("refresh_token")
   created := r.GetValue("created_at")
   expires := r.GetValue("expires_in")
-  et.expiresTime = r.CastFloatToInt(created) + r.CastFloatToInt(expires)
+  et.expiresTime = restapi.CastFloatToInt(created) + restapi.CastFloatToInt(expires)
   et.AddOwner()
 
   return true
@@ -535,6 +585,10 @@ func (et *MyTesla) help(){
     fmt.Println(name, value.args, ":", value.desc)
 
   }
+  fmt.Println();
+  fmt.Println("Set Cmds");
+  fmt.Println("wake vehicle_id - Wake up Vehicle");
+  fmt.Println("setchargelimit vehicle_id percent - Sets the charge limit\n");
 
 /*
   fmt.Println("tesla login | getvehiclelist | addsecrets | getsecrets | getowner | delowner | refreshtoken | getvehiclelist | getchargestate | getclimatestate | updatesecrets \n");
@@ -704,10 +758,22 @@ func main() {
         os.Exit(1);
       }
 
-
       if(myTL.Wake(args[2])){
         fmt.Println("Wake worked")
       }
+
+    case "setchargelimit":
+      if(len(args) < 4){
+        fmt.Println("Missing Vehicle ID or charge limit value\n");
+        os.Exit(1);
+      }
+
+      myTL.Wake(args[2])
+
+      if(myTL.SetChargeLimit(args[2], args[3])){
+        fmt.Println("SetChargeLimiit worked")
+      }
+
 
     case "service_data":
       fallthrough
@@ -745,13 +811,13 @@ func main() {
       
         fmt.Printf("superchargers[%s]\n", tmp1)
 
-        myarray := myTL.nearbyCharging.CastArray(tmp1)
+        myarray := restapi.CastArray(tmp1)
 
         fmt.Println("array len:", len(myarray))
 
         for i:=0; i < len(myarray); i++ {
     
-          tmpmap := myTL.nearbyCharging.CastMap(myarray[i])
+          tmpmap := restapi.CastMap(myarray[i])
           
           for name, value := range tmpmap{
       
