@@ -11,7 +11,7 @@ clean:
 	rm -f file.json
 	rm -f modelx.json
 
-tesla: file.json
+tesla: file.json modelx.json
 	go build
 
 deps:
@@ -23,6 +23,10 @@ deps:
 
 getjson: file.json
 	@echo Built json file
+
+modelx.json: file.json
+	@echo Linking modelx.json file.json
+	@ln -s file.json modelx.json
 
 file.json: 
 	go run util/buildjson.go
