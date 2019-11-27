@@ -3,6 +3,7 @@ package main
 import "fmt"
 import "time"
 import "github.com/seldonsmule/logmsg"
+import "github.com/denisbrodbeck/machineid"
 import "database/sql"
 //import "database/sql/driver"
 import  _ "github.com/mattn/go-sqlite3"
@@ -244,6 +245,46 @@ func (edb *MyDatabase) init(){
     logmsg.Print(logmsg.Error,"Unable to create table owner")
   }
 
+  if(!edb.createTable("tamper", "CREATE TABLE `tamper` (`machineid` VARCHAR(256) NULL) ") ){
+    logmsg.Print(logmsg.Error,"Unable to create table tamper")
+  }
+
+  id , _ := machineid.ProtectedID(constDbName);
+fmt.Println(id)
+
+
+  sqlmsg := "select * from tamper limit 1";
+
+  row, err := edb.handle.Query(sqlmsg);
+  //_ = row // found a way to undo the variable since we don't really need it
+          // and we get an error otherwise.  I am sure some geek will comment
+          // on how bad this code is :)
+
+  if(err != nil){
+    logmsg.Print(logmsg.Error, "Error reading table tamper");
+    return 
+  }
+
+  defer row.Close()
+
+  var mid string
+
+  row.Next()
+
+  err = row.Scan(&mid)
+  
+  fmt.Printf("mid = %s\n", mid)
+
+  if(mid == ""){
+    fmt.Println("machine id not set")
+
+    sqlinsert := fmt.Sprintf("INSERT INTO tamper (machineid) VALUES('%s');",
+                             id)
+    fmt.Println(sqlinsert)
+    edb.handle.Exec(sqlinsert)
+  }else{
+    fmt.Println("we have the id")
+  }
 
 
 }

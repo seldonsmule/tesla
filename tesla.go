@@ -158,6 +158,8 @@ func (et *MyTesla) init(){
   et.dataRequestMapAdd("drive_state","vehicle_id", "Gets drive state data")
   et.dataRequestMapAdd("gui_settings","vehicle_id", "Gets gui settings data")
   et.dataRequestMapAdd("vehicle_config","vehicle_id", "Gets vehicle config data")
+  et.dataRequestMapAdd("vehicle_state","vehicle_id", "Gets vehicle state data")
+  et.dataRequestMapAdd("nearbycharging","vehicle_id", "Gets vehicle state data")
   et.dataRequestMapAdd("service_data","vehicle_id", "Gets service data")
 
 
@@ -798,6 +800,7 @@ func main() {
         r.obj.Dump()
       }
 
+
     case "nearbycharging":
       if(len(args) < 3){
         fmt.Println("Missing Vehicle ID\n");
@@ -828,6 +831,7 @@ func main() {
         }
 
       }
+
 
     case "getvehicle":
       if(len(args) < 3){
