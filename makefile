@@ -11,8 +11,11 @@ clean:
 	rm -f file.json
 	rm -f modelx.json
 
-tesla: file.json modelx.json
+tesla: file.json modelx.json $(LOGMSG)
 	go build
+
+$(LOGMSG): 
+	make deps
 
 deps:
 	go get github.com/seldonsmule/logmsg
@@ -20,6 +23,16 @@ deps:
 	go get github.com/mattn/go-sqlite3
 	go get github.com/denisbrodbeck/machineid
 	go get golang.org/x/crypto/ssh/terminal
+
+rmdeps:
+	@rm -f $(pkg_dir)/github.com/seldonsmule/logmsg.a
+	@rm -rf $(GOPATH)/src/github.com/seldonsmule/logmsg
+	@rm -f $(pkg_dir)/github.com/seldonsmule/restapi.a
+	@rm -rf $(GOPATH)/src/github.com/seldonsmule/restapi
+	@rm -f $(pkg_dir)/github.com/mattn/go-sqlite3.a
+	@rm -rf $(GOPATH)/src/github.com/mattn/go-sqlite3
+	@rm -f $(pkg_dir)/github.com/denisbrodbeck/machineid.a
+	@rm -rf $(GOPATH)/src/github.com/denisbrodbeck/machineid
 
 getjson: file.json
 	@echo Built json file
