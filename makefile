@@ -25,7 +25,7 @@ deps:
 	go get golang.org/x/crypto/ssh/terminal
 
 rmdeps:
-	@rm -f $(pkg_dir)/github.com/seldonsmule/logmsg.a
+	@rm -f $(LOGMSG)
 	@rm -rf $(GOPATH)/src/github.com/seldonsmule/logmsg
 	@rm -f $(pkg_dir)/github.com/seldonsmule/restapi.a
 	@rm -rf $(GOPATH)/src/github.com/seldonsmule/restapi
