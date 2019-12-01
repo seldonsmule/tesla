@@ -4,15 +4,22 @@ pkg_dir = $(GOPATH)/pkg/darwin_amd64
 
 LOGMSG = $(pkg_dir)/github.com/seldonsmule/logmsg.a
 
-all: tesla
+TESLIB = $(pkg_dir)/tesla.a
+
+all: $(TESLIB) tesla_cmd
 
 clean:
 	go clean
 	rm -f file.json
 	rm -f modelx.json
+	rm tesla_cmd
 
-tesla: file.json modelx.json $(LOGMSG)
+$(TESLIB): file.json modelx.json $(LOGMSG) tesla.go
 	go build
+	go install
+
+tesla_cmd: example/tesla_cmd.go
+	go build example/tesla_cmd.go
 
 $(LOGMSG): 
 	make deps

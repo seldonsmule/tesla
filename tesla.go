@@ -1,4 +1,4 @@
-package main
+package tesla
 
 import (
 	"os"
@@ -27,10 +27,10 @@ const TESLA_API_URL = "https://owner-api.teslamotors.com"
 
 type rest_cmds struct {
 
-  cmd string
-  args string
-  desc string
-  obj *restapi.Restapi
+  Cmd string
+  Args string
+  Desc string
+  Obj *restapi.Restapi
 
 }
 
@@ -39,8 +39,8 @@ type MyTesla struct {
   myDB *MyDatabase
 
 
-  clientSecret string
-  clientID     string
+  ClientSecret string
+  ClientID     string
 
   accessToken string
   email string
@@ -48,15 +48,15 @@ type MyTesla struct {
   expiresTime int
 
   //modelxoptions map[string]interface{}
-  modelxoptions map[string]string
+  Modelxoptions map[string]string
 
-  vehicleList *restapi.Restapi
-  singleVehicle *restapi.Restapi
-  wake *restapi.Restapi
-  setchargelimit *restapi.Restapi
-  nearbyCharging *restapi.Restapi
+  VehicleList *restapi.Restapi
+  SingleVehicle *restapi.Restapi
+  Wake *restapi.Restapi
+  Setchargelimit *restapi.Restapi
+  NearbyCharging *restapi.Restapi
 
-  dataRequestMap map[string]rest_cmds
+  DataRequestMap map[string]rest_cmds
 
 }
 
@@ -126,13 +126,15 @@ func (et *MyTesla) nearbyURL(id string) string{
 
 
 func (et *MyTesla) ModelXOption(code string) string{
-    return string(et.modelxoptions[code])
+    return string(et.Modelxoptions[code])
 }
 
 
-func (et *MyTesla) init(){
+func New() *MyTesla{
 
-  logmsg.Print(logmsg.Info, "In MyTesla init");
+  t := new(MyTesla) 
+
+  logmsg.Print(logmsg.Info, "In MyTesla New");
 
   jsonFile, err := os.Open("modelx.json")
 
@@ -141,72 +143,47 @@ func (et *MyTesla) init(){
 
     byteValue, _ := ioutil.ReadAll(jsonFile)
 
-    json.Unmarshal([]byte(byteValue), &et.modelxoptions)
+    json.Unmarshal([]byte(byteValue), &t.Modelxoptions)
 
   }else{
     fmt.Println("unable to open file")
   }
 
-  et.myDB = new(MyDatabase)
+  t.myDB = new(MyDatabase)
 
-  et.myDB.init()
+  t.myDB.init()
 
-  et.vehicleList = nil
-  et.dataRequestMap = make(map[string]rest_cmds)
-  et.dataRequestMapAdd("charge_state","vehicle_id", "Gets charge state data")
-  et.dataRequestMapAdd("climate_state","vehicle_id", "Gets climate state data")
-  et.dataRequestMapAdd("drive_state","vehicle_id", "Gets drive state data")
-  et.dataRequestMapAdd("gui_settings","vehicle_id", "Gets gui settings data")
-  et.dataRequestMapAdd("vehicle_config","vehicle_id", "Gets vehicle config data")
-  et.dataRequestMapAdd("vehicle_state","vehicle_id", "Gets vehicle state data")
-  et.dataRequestMapAdd("nearbycharging","vehicle_id", "Gets vehicle state data")
-  et.dataRequestMapAdd("service_data","vehicle_id", "Gets service data")
-
-
-/*
-// testing being
-  et.Login()
-
-  et.dataRequestMap = make(map[string]rest_cmds)
-  et.dataRequestMap["nerd"] = rest_cmds{"vehicle_state", "vehicle_id", nil}
+  t.VehicleList = nil
+  t.DataRequestMap = make(map[string]rest_cmds)
+  t.dataRequestMapAdd("charge_state","vehicle_id", "Gts charge state data")
+  t.dataRequestMapAdd("climate_state","vehicle_id", "Gets climate state data")
+  t.dataRequestMapAdd("drive_state","vehicle_id", "Gets drive state data")
+  t.dataRequestMapAdd("gui_settings","vehicle_id", "Gets gui settings data")
+  t.dataRequestMapAdd("vehicle_config","vehicle_id", "Gets vehicle config data")
+  t.dataRequestMapAdd("vehicle_state","vehicle_id", "Gets vehicle state data")
+  t.dataRequestMapAdd("nearbycharging","vehicle_id", "Gets vehicle state data")
+  t.dataRequestMapAdd("service_data","vehicle_id", "Gets service data")
 
 
-  r := et.dataRequestMap["nerd"]
-  r.obj = restapi.NewGet(r.cmd, et.data_requestURL(r.cmd, "27207623174674431")) 
-  r.obj.SetBearerAccessToken(et.accessToken)
-  r.obj.HasInnerMap("response")
-
-  r.obj.Send()
-
-  r.obj.Dump()
-
-  et.dataRequestMap["nerd"] = r
-  
-
-fmt.Println("r print:", r)
-fmt.Println("last print:", et.dataRequestMap)
-fmt.Println("len:", len(et.dataRequestMap))
-os.Exit(5)
-// testing end
-*/
+  return t
 
 }
 
 func (et *MyTesla) dataRequestMapAdd(name string, args string, desc string){
 
 
-  et.dataRequestMap[name] = rest_cmds{name, args, desc, nil}
+  et.DataRequestMap[name] = rest_cmds{name, args, desc, nil}
 }
 
 func (et *MyTesla) AddSecrets(){
 
-   et.myDB.AddApiDetails(et.clientID, et.clientSecret);
+   et.myDB.AddApiDetails(et.ClientID, et.ClientSecret);
 
 }
 
 func (et *MyTesla) GetSecrets() (bool){
 
-  if(!et.myDB.GetApiDetails(&et.clientID, &et.clientSecret)){
+  if(!et.myDB.GetApiDetails(&et.ClientID, &et.ClientSecret)){
     // not found - try auto updating them
     if(!et.UpdateSecrets()){
       return false
@@ -244,8 +221,8 @@ func (et *MyTesla) RefreshToken(skipLogin bool) bool{
 
   fmt.Println("Starting RefreshToken")
 
-  r := restapi.NewPost("authentication", et.refreshtokenURL(et.clientID,
-                                                          et.clientSecret,
+  r := restapi.NewPost("authentication", et.refreshtokenURL(et.ClientID,
+                                                          et.ClientSecret,
                                                           et.refreshToken))
   if(r.Send()){
     //r.Dump()
@@ -265,27 +242,27 @@ func (et *MyTesla) RefreshToken(skipLogin bool) bool{
 
 }
 
-func (et *MyTesla) Wake(id string) bool{
+func (et *MyTesla) WakeCmd(id string) bool{
 
   var stateStr string
 
   et.Login() // the act of logging in will populate this info
 
-  if(et.wake != nil){
+  if(et.Wake != nil){
     return true  // i.e., we already made this call
   }
 
-  et.wake = restapi.NewPost("wake", et.wakeURL(id))
+  et.Wake = restapi.NewPost("wake", et.wakeURL(id))
 
-  et.wake.SetBearerAccessToken(et.accessToken)
-  et.wake.HasInnerMap("response")
+  et.Wake.SetBearerAccessToken(et.accessToken)
+  et.Wake.HasInnerMap("response")
 
-  for et.wake.Send() {
+  for et.Wake.Send() {
 
-    stateStr = et.wake.GetValueString("state")
+    stateStr = et.Wake.GetValueString("state")
 
     if(strings.Compare(stateStr,"online") == 0){
-      et.wake.Dump()
+      et.Wake.Dump()
       return true
     }
 
@@ -298,25 +275,25 @@ func (et *MyTesla) Wake(id string) bool{
 
 }
 
-func (et *MyTesla) SetChargeLimit(id string, percent_value string) bool{
+func (et *MyTesla) SetChargeLimitCmd(id string, percent_value string) bool{
 
   //var stateStr string
 
   et.Login() // the act of logging in will populate this info
 
-  et.setchargelimit = restapi.NewPost("setchargelimit", et.setchargelimitURL(id))
+  et.Setchargelimit = restapi.NewPost("Setchargelimit", et.setchargelimitURL(id))
 
-  et.setchargelimit.SetBearerAccessToken(et.accessToken)
-  et.setchargelimit.HasInnerMap("response")
+  et.Setchargelimit.SetBearerAccessToken(et.accessToken)
+  et.Setchargelimit.HasInnerMap("response")
 
   jsonstr := fmt.Sprintf("{\"percent\":\"%s\"}", percent_value)
 
-  et.setchargelimit.SetPostJson(jsonstr)
+  et.Setchargelimit.SetPostJson(jsonstr)
 
-  if(et.setchargelimit.Send()){
-    et.setchargelimit.Dump()
+  if(et.Setchargelimit.Send()){
+    et.Setchargelimit.Dump()
   }else{
-    logmsg.Print(logmsg.Error,"setchargelimit"," Failed ", id)
+    logmsg.Print(logmsg.Error,"Setchargelimit"," Failed ", id)
     return false
   }
 
@@ -343,38 +320,38 @@ func (et *MyTesla) DataRequest(id string, cmd string) bool{
 
   et.Login() // the act of logging in will populate this info
 
-  r := et.dataRequestMap[cmd]
+  r := et.DataRequestMap[cmd]
 
-  if(r.obj == nil){ // not setup before
+  if(r.Obj == nil){ // not setup before
     url := fmt.Sprintf("%s/api/1/vehicles/%s/data_request/%s", TESLA_API_URL, id, cmd)
-    r.obj = restapi.NewGet(r.cmd, url) 
-    r.obj.SetBearerAccessToken(et.accessToken)
-    r.obj.HasInnerMap("response")
+    r.Obj = restapi.NewGet(r.Cmd, url) 
+    r.Obj.SetBearerAccessToken(et.accessToken)
+    r.Obj.HasInnerMap("response")
   }
 
-  if(r.obj.Send()){
+  if(r.Obj.Send()){
     //et.tmpobj.Dump()
   }else{
     logmsg.Print(logmsg.Error,cmd," Failed ", id)
     return false
   }
 
-  et.dataRequestMap[cmd] = r
+  et.DataRequestMap[cmd] = r
 
   return true
 }
 
-func (et *MyTesla) NearbyCharging(id string) bool{
+func (et *MyTesla) NearbyChargingCmd(id string) bool{
 
   et.Login() // the act of logging in will populate this info
 
-  et.nearbyCharging = restapi.NewGet("nearby_charging_sites", et.nearbyURL(id))
+  et.NearbyCharging = restapi.NewGet("nearby_charging_sites", et.nearbyURL(id))
 
-  et.nearbyCharging.SetBearerAccessToken(et.accessToken)
-  et.nearbyCharging.HasInnerMap("response")
+  et.NearbyCharging.SetBearerAccessToken(et.accessToken)
+  et.NearbyCharging.HasInnerMap("response")
 
-  if(et.nearbyCharging.Send()){
-    //et.nearbyCharging.Dump()
+  if(et.NearbyCharging.Send()){
+    //et.NearbyCharging.Dump()
   }else{
     logmsg.Print(logmsg.Error,"NearbyCharging Failed ", id)
     return false
@@ -384,22 +361,22 @@ func (et *MyTesla) NearbyCharging(id string) bool{
 
 }
 
-func (et *MyTesla) GetVehicle(id string) bool{
+func (et *MyTesla) GetVehicleCmd(id string) bool{
 
 
   et.Login() // the act of logging in will populate this info
 
-  if(et.singleVehicle != nil){
+  if(et.SingleVehicle != nil){
     return true  // i.e., we already made this call
   }
 
-  et.singleVehicle = restapi.NewGet("singlevehicles", et.singlevehicleURL(id))
+  et.SingleVehicle = restapi.NewGet("Singlevehicles", et.singlevehicleURL(id))
 
-  et.singleVehicle.SetBearerAccessToken(et.accessToken)
-  et.singleVehicle.HasInnerMap("response")
+  et.SingleVehicle.SetBearerAccessToken(et.accessToken)
+  et.SingleVehicle.HasInnerMap("response")
 
-  if(et.singleVehicle.Send()){
-    et.singleVehicle.Dump()
+  if(et.SingleVehicle.Send()){
+    et.SingleVehicle.Dump()
   }else{
     logmsg.Print(logmsg.Error,"get vehicle failed:", id)
     return false
@@ -408,7 +385,7 @@ func (et *MyTesla) GetVehicle(id string) bool{
 /*
   //vehicle := new(RestVehicles)
 
-  if(!et.singleVehicle.sendGetSingleVehicle(id, et.accessToken)){
+  if(!et.SingleVehicle.sendGetSingleVehicle(id, et.accessToken)){
     fmt.Println("GET Vehicle failed");
     logmsg.Print(logmsg.Error,"GET Vehicle failed")
     return false
@@ -420,30 +397,30 @@ func (et *MyTesla) GetVehicle(id string) bool{
 
 }
 
-func (et *MyTesla) GetVehicleList() bool{
+func (et *MyTesla) GetVehicleListCmd() bool{
 
   et.Login() // the act of logging in will populate this info
 
   //vehicles := new(RestVehicles)
 
-  if(et.vehicleList != nil){
+  if(et.VehicleList != nil){
     return true  // i.e., we already made this call
   }
 
-  et.vehicleList = restapi.NewGet("vehicles", et.vehiclesURL())
+  et.VehicleList = restapi.NewGet("vehicles", et.vehiclesURL())
 
-  et.vehicleList.SetBearerAccessToken(et.accessToken)
-  et.vehicleList.HasInnerMapArray("response","count")
+  et.VehicleList.SetBearerAccessToken(et.accessToken)
+  et.VehicleList.HasInnerMapArray("response","count")
 
-  if(et.vehicleList.Send()){
-    //et.vehicleList.Dump()
+  if(et.VehicleList.Send()){
+    //et.VehicleList.Dump()
   }else{
     logmsg.Print(logmsg.Error,"get vehicles list failed")
     return false
   }
 
 /*
-  if(!et.vehicleList.sendGetVehicleList(et.accessToken)){
+  if(!et.VehicleList.sendGetVehicleList(et.accessToken)){
     fmt.Println("GET Vehicles failed");
     logmsg.Print(logmsg.Error,"GET Vehicles failed")
     return false
@@ -549,8 +526,8 @@ fmt.Println("owner status:", status)
   }
 
 
-  r := restapi.NewPost("authentication", et.authenticationURL(et.clientID,
-                                                          et.clientSecret,
+  r := restapi.NewPost("authentication", et.authenticationURL(et.ClientID,
+                                                          et.ClientSecret,
                                                           email1,
                                                           passwd1))
   r.DebugOn()
@@ -576,15 +553,15 @@ fmt.Println("owner status:", status)
 
 //////////////////////////
 
-func (et *MyTesla) help(){
+func (et *MyTesla) Help(){
 
   fmt.Println("tesla login | getvehiclelist | addsecrets | getsecrets | getowner | delowner | refreshtoken | getvehiclelist | getchargestate | getclimatestate | updatesecrets \n");
 
   fmt.Println()
   fmt.Println("Get State Cmds")
-  for name, value := range et.dataRequestMap {
+  for name, value := range et.DataRequestMap {
 
-    fmt.Println(name, value.args, ":", value.desc)
+    fmt.Println(name, value.Args, ":", value.Desc)
 
   }
   fmt.Println();
@@ -702,8 +679,8 @@ func (et *MyTesla) UpdateSecrets() bool{
     return false
   }
 
-  et.clientID = client_id
-  et.clientSecret = client_secret
+  et.ClientID = client_id
+  et.ClientSecret = client_secret
 
   et.AddSecrets();
 
@@ -711,244 +688,5 @@ func (et *MyTesla) UpdateSecrets() bool{
 //  fmt.Println("client secret found: [", client_secret, "]")
 
   return true
-
-}
-
-func main() {
-
-  logmsg.SetLogFile("tesla.log");
-  var EgcOptionCodes []string
-
-  myTL := new(MyTesla)
-  myTL.init()
-
-  args := os.Args;
-
-  if(len(args) < 2){
-    fmt.Println("To few arguments\n");
-    myTL.help();
-    os.Exit(1);
-  }
-
-
-//  fmt.Println(len(args));
-
-  switch args[1]{
-
-    case "login":
-      if(!myTL.Login()){
-        fmt.Println("Login failed")
-        os.Exit(4)
-      }
-
-    case "getowner":
-      myTL.DumpOwnerInfo()
-
-    case "updatescrets":
-      myTL.UpdateSecrets()
-   
-
-    case "delowner":
-      myTL.DelOwner()
-
-    case "refreshtoken":
-      myTL.RefreshToken(false)
-
-    case "wake":
-      if(len(args) < 3){
-        fmt.Println("Missing Vehicle ID\n");
-        os.Exit(1);
-      }
-
-      if(myTL.Wake(args[2])){
-        fmt.Println("Wake worked")
-      }
-
-    case "setchargelimit":
-      if(len(args) < 4){
-        fmt.Println("Missing Vehicle ID or charge limit value\n");
-        os.Exit(1);
-      }
-
-      myTL.Wake(args[2])
-
-      if(myTL.SetChargeLimit(args[2], args[3])){
-        fmt.Println("SetChargeLimiit worked")
-      }
-
-
-    case "service_data":
-      fallthrough
-    case "charge_state":
-      fallthrough
-    case "climate_state":
-      fallthrough
-    case "drive_state":
-      fallthrough
-    case "gui_settings":
-      fallthrough
-    case "vehicle_state":
-      fallthrough
-    case "vehicle_config":
-      if(len(args) < 3){
-        fmt.Println("Missing Vehicle ID\n");
-        os.Exit(1);
-      }
-
-      if(myTL.DataRequest(args[2], args[1])){
-        r := myTL.dataRequestMap[args[1]]
-        r.obj.Dump()
-      }
-
-
-    case "nearbycharging":
-      if(len(args) < 3){
-        fmt.Println("Missing Vehicle ID\n");
-        os.Exit(1);
-      }
-
-      if(myTL.NearbyCharging(args[2])){
-        myTL.nearbyCharging.Dump()
-
-        tmp1 := myTL.nearbyCharging.GetValue("superchargers")
-      
-        fmt.Printf("superchargers[%s]\n", tmp1)
-
-        myarray := restapi.CastArray(tmp1)
-
-        fmt.Println("array len:", len(myarray))
-
-        for i:=0; i < len(myarray); i++ {
-    
-          tmpmap := restapi.CastMap(myarray[i])
-          
-          for name, value := range tmpmap{
-      
-            fmt.Println(name, "=", value)
-    
-          }
-  
-        }
-
-      }
-
-
-    case "getvehicle":
-      if(len(args) < 3){
-        fmt.Println("Missing Vehicle ID\n");
-        os.Exit(1);
-      }
-
-      myTL.GetVehicle(args[2])
-
-      fmt.Printf("Ids[%s]\n", myTL.singleVehicle.GetValueString("id_s"))
-      fmt.Printf("Vin[%s]\n", myTL.singleVehicle.GetValueString("vin"))
-      fmt.Printf("DisplayName[%s]\n", myTL.singleVehicle.GetValueString("display_name"))
-      fmt.Printf("State[%s]\n", myTL.singleVehicle.GetValueString("state"))
-
-      EgcOptionCodes = strings.Split(myTL.singleVehicle.GetValueString("option_codes"),",")
-
-      for i:=0; i < len(EgcOptionCodes); i++ {
-        code := EgcOptionCodes[i]
-        desc := myTL.ModelXOption(code)
-        if(desc != ""){
-          fmt.Println(code, " ", desc)
-        }
-      
-      }
-
-/*
-      fmt.Println("ID: ", myTL.singleVehicle.Single.Response.Id)
-      fmt.Println("VehicleId: ", myTL.singleVehicle.Single.Response.VehicleId)
-      fmt.Println("Vin: ", myTL.singleVehicle.Single.Response.Vin)
-      fmt.Println("DisplayName: ", myTL.singleVehicle.Single.Response.DisplayName)
-      //fmt.Println("OptionCodes: ", myTL.singleVehicle.Single.Response.OptionCodes)
-      fmt.Println("Color: ", myTL.singleVehicle.Single.Response.Color)
-      fmt.Println("Tokens: ", myTL.singleVehicle.Single.Response.Tokens)
-      fmt.Println("State: ", myTL.singleVehicle.Single.Response.State)
-      fmt.Println("InService: ", myTL.singleVehicle.Single.Response.InService)
-      fmt.Println("IdString: ", myTL.singleVehicle.Single.Response.IdString)
-      fmt.Println("CalendarEnabled: ", myTL.singleVehicle.Single.Response.CalendarEnabled)
-      fmt.Println("ApiVersion: ", myTL.singleVehicle.Single.Response.ApiVersion)
-      fmt.Println("BackseatToken: ", myTL.singleVehicle.Single.Response.BackseatToken)
-      fmt.Println("BackseatTokenUpdatedAt: ", myTL.singleVehicle.Single.Response.BackseatTokenUpdatedAt)
-
-        for i:=0; i < len(myTL.singleVehicle.Single.Response.EgcOptionCodes); i++ {
-          code := myTL.singleVehicle.Single.Response.EgcOptionCodes[i]
-          desc := myTL.ModelXOption(code)
-          if(desc != ""){
-            fmt.Println(code, " ", desc)
-          }
-      
-        }
-*/
-
-
-    case "getvehiclelist":
-      myTL.GetVehicleList()
-
-      count := myTL.vehicleList.GetValueInt("count")
-
-      fmt.Printf("Number of vehicles[%d]\n",count)
-
-//myTL.vehicleList.Dump()
-   
-
-      for j:= 0; j < count; j++ {
-        fmt.Println("Vehicle: ", j)
-        fmt.Printf("Ids[%s]\n", myTL.vehicleList.GetArrayValueString(j,"id_s"))
-        fmt.Printf("Vin[%s]\n", myTL.vehicleList.GetArrayValueString(j,"vin"))
-        fmt.Printf("DisplayName[%s]\n", myTL.vehicleList.GetArrayValueString(j,"display_name"))
-        fmt.Printf("State[%s]\n", myTL.vehicleList.GetArrayValueString(j,"state"))
-
-        //fmt.Printf("options[%s]\n", myTL.vehicleList.GetArrayValueString(j,"option_codes"))
-        EgcOptionCodes = strings.Split(myTL.vehicleList.GetArrayValueString(j,"option_codes"),",")
-
-        for i:=0; i < len(EgcOptionCodes); i++ {
-          code := EgcOptionCodes[i]
-          desc := myTL.ModelXOption(code)
-          if(desc != ""){
-            fmt.Println(code, " ", desc)
-          }
-      
-        }
-
-
-      }
-
-
-    case "getsecrets":
-
-      fmt.Println("GetSecrets")
-      dberr := myTL.GetSecrets()
-      if(dberr){
-        fmt.Println("ID[",myTL.clientID,"] secret[",myTL.clientSecret,"]")
-      }else{
-        fmt.Println("Yikes - DB error!.  Have you stored secrets?");
-        os.Exit(3);
-      }
-    
-
-    case "addsecrets":
-      if(len(args) < 4){
-        fmt.Println("addsecrets missing values\n\n");
-        os.Exit(2);
-      }
-
-      myTL.clientID = args[2]
-      myTL.clientSecret = args[3]
-
-      myTL.AddSecrets();
-     
-
-    default:
-      myTL.help();
-      os.Exit(2);
-
-  } // end switch
-
-
-os.Exit(0);
-
 
 }

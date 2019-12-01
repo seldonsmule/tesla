@@ -1,4 +1,4 @@
-package main
+package tesla
 
 import "fmt"
 import "time"
