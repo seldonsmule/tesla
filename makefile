@@ -1,4 +1,5 @@
 # Makefile is esaier for me - i am sure others can do this better
+#
 
 pkg_dir = $(GOPATH)/pkg/darwin_amd64
 
