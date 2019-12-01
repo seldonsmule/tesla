@@ -12,7 +12,8 @@ clean:
 	go clean
 	rm -f file.json
 	rm -f modelx.json
-	rm tesla_cmd
+	rm -f $(TESLIB)
+	rm -f tesla_cmd
 
 $(TESLIB): file.json modelx.json $(LOGMSG) tesla.go
 	go build
