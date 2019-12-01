@@ -18,7 +18,7 @@ $(TESLIB): file.json modelx.json $(LOGMSG) tesla.go
 	go build
 	go install
 
-tesla_cmd: example/tesla_cmd.go
+tesla_cmd: example/tesla_cmd.go tesla.go
 	go build example/tesla_cmd.go
 
 $(LOGMSG): 

@@ -93,7 +93,7 @@ func main() {
 
       if(myTL.DataRequest(args[2], args[1])){
         r := myTL.DataRequestMap[args[1]]
-        r.Obj.Dump()
+        r.Dump()
       }
 
 
@@ -216,7 +216,7 @@ func main() {
       fmt.Println("GetSecrets")
       dberr := myTL.GetSecrets()
       if(dberr){
-        fmt.Println("ID[",myTL.ClientID,"] secret[",myTL.ClientSecret,"]")
+        fmt.Println("ID[",myTL.GetClientID(),"] secret[",myTL.GetClientSecret(),"]")
       }else{
         fmt.Println("Yikes - DB error!.  Have you stored secrets?");
         os.Exit(3);
@@ -229,8 +229,8 @@ func main() {
         os.Exit(2);
       }
 
-      myTL.ClientID = args[2]
-      myTL.ClientSecret = args[3]
+      myTL.SetClientID(args[2])
+      myTL.SetClientSecret(args[3])
 
       myTL.AddSecrets();
      

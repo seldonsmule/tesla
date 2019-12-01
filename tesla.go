@@ -5,18 +5,12 @@ import (
 	"fmt"
         "time"
         "github.com/seldonsmule/restapi"
-//        "bufio"
-        //"syscall"
         "strconv"
         "strings"
 	"net/http"
 	"io/ioutil"
         "encoding/json"
-//        "database/sql"
-  //      "time"
-//        _ "github.com/mattn/go-sqlite3" 
         "github.com/seldonsmule/logmsg"
-//        "golang.org/x/crypto/ssh/terminal"
 )
 
 const const_sec_oneweek    = 604800
@@ -27,10 +21,19 @@ const TESLA_API_URL = "https://owner-api.teslamotors.com"
 
 type rest_cmds struct {
 
-  Cmd string
-  Args string
-  Desc string
-  Obj *restapi.Restapi
+  cmd string
+  args string
+  desc string
+  obj *restapi.Restapi
+
+}
+
+func (rc *rest_cmds) Dump(){
+
+  fmt.Printf("Cmd: %s\n", rc.cmd)
+  fmt.Printf("Args: %s\n", rc.args)
+  fmt.Printf("Desc: %s\n", rc.desc)
+  rc.obj.Dump()
 
 }
 
@@ -39,8 +42,8 @@ type MyTesla struct {
   myDB *MyDatabase
 
 
-  ClientSecret string
-  ClientID     string
+  clientSecret string
+  clientID     string
 
   accessToken string
   email string
@@ -58,6 +61,22 @@ type MyTesla struct {
 
   DataRequestMap map[string]rest_cmds
 
+}
+
+func (et *MyTesla) GetClientID() string{
+  return et.clientID
+}
+
+func (et *MyTesla) SetClientID(id string){
+  et.clientID = id
+}
+
+func (et *MyTesla) GetClientSecret() string{
+  return et.clientSecret
+}
+
+func (et *MyTesla) SetClientSecret(secret string){
+  et.clientSecret = secret
 }
 
 func (et *MyTesla) authenticationURL(id string, sec string, email string, pwd string) string{
@@ -177,13 +196,13 @@ func (et *MyTesla) dataRequestMapAdd(name string, args string, desc string){
 
 func (et *MyTesla) AddSecrets(){
 
-   et.myDB.AddApiDetails(et.ClientID, et.ClientSecret);
+   et.myDB.AddApiDetails(et.GetClientID(), et.GetClientSecret());
 
 }
 
 func (et *MyTesla) GetSecrets() (bool){
 
-  if(!et.myDB.GetApiDetails(&et.ClientID, &et.ClientSecret)){
+  if(!et.myDB.GetApiDetails(&et.clientID, &et.clientSecret)){
     // not found - try auto updating them
     if(!et.UpdateSecrets()){
       return false
@@ -221,8 +240,8 @@ func (et *MyTesla) RefreshToken(skipLogin bool) bool{
 
   fmt.Println("Starting RefreshToken")
 
-  r := restapi.NewPost("authentication", et.refreshtokenURL(et.ClientID,
-                                                          et.ClientSecret,
+  r := restapi.NewPost("authentication", et.refreshtokenURL(et.clientID,
+                                                          et.clientSecret,
                                                           et.refreshToken))
   if(r.Send()){
     //r.Dump()
@@ -322,14 +341,14 @@ func (et *MyTesla) DataRequest(id string, cmd string) bool{
 
   r := et.DataRequestMap[cmd]
 
-  if(r.Obj == nil){ // not setup before
+  if(r.obj == nil){ // not setup before
     url := fmt.Sprintf("%s/api/1/vehicles/%s/data_request/%s", TESLA_API_URL, id, cmd)
-    r.Obj = restapi.NewGet(r.Cmd, url) 
-    r.Obj.SetBearerAccessToken(et.accessToken)
-    r.Obj.HasInnerMap("response")
+    r.obj = restapi.NewGet(r.cmd, url) 
+    r.obj.SetBearerAccessToken(et.accessToken)
+    r.obj.HasInnerMap("response")
   }
 
-  if(r.Obj.Send()){
+  if(r.obj.Send()){
     //et.tmpobj.Dump()
   }else{
     logmsg.Print(logmsg.Error,cmd," Failed ", id)
@@ -526,8 +545,8 @@ fmt.Println("owner status:", status)
   }
 
 
-  r := restapi.NewPost("authentication", et.authenticationURL(et.ClientID,
-                                                          et.ClientSecret,
+  r := restapi.NewPost("authentication", et.authenticationURL(et.clientID,
+                                                          et.clientSecret,
                                                           email1,
                                                           passwd1))
   r.DebugOn()
@@ -561,7 +580,7 @@ func (et *MyTesla) Help(){
   fmt.Println("Get State Cmds")
   for name, value := range et.DataRequestMap {
 
-    fmt.Println(name, value.Args, ":", value.Desc)
+    fmt.Println(name, value.args, ":", value.desc)
 
   }
   fmt.Println();
@@ -679,8 +698,8 @@ func (et *MyTesla) UpdateSecrets() bool{
     return false
   }
 
-  et.ClientID = client_id
-  et.ClientSecret = client_secret
+  et.clientID = client_id
+  et.clientSecret = client_secret
 
   et.AddSecrets();
 
