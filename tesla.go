@@ -24,7 +24,7 @@ type rest_cmds struct {
   cmd string
   args string
   desc string
-  obj *restapi.Restapi
+  Obj *restapi.Restapi
 
 }
 
@@ -33,7 +33,7 @@ func (rc *rest_cmds) Dump(){
   fmt.Printf("Cmd: %s\n", rc.cmd)
   fmt.Printf("Args: %s\n", rc.args)
   fmt.Printf("Desc: %s\n", rc.desc)
-  rc.obj.Dump()
+  rc.Obj.Dump()
 
 }
 
@@ -49,6 +49,8 @@ type MyTesla struct {
   email string
   refreshToken string
   expiresTime int
+
+  debug bool
 
   //modelxoptions map[string]interface{}
   Modelxoptions map[string]string
@@ -149,9 +151,10 @@ func (et *MyTesla) ModelXOption(code string) string{
 }
 
 
-func New() *MyTesla{
+func New(dbName string) *MyTesla{
 
   t := new(MyTesla) 
+
 
   logmsg.Print(logmsg.Info, "In MyTesla New");
 
@@ -165,12 +168,16 @@ func New() *MyTesla{
     json.Unmarshal([]byte(byteValue), &t.Modelxoptions)
 
   }else{
-    fmt.Println("unable to open file")
+    logmsg.Print(logmsg.Error, "unable to open file")
   }
 
   t.myDB = new(MyDatabase)
 
-  t.myDB.init()
+  t.myDB.init(dbName)
+
+
+  logmsg.Print(logmsg.Info,"=== DEBUG TURNED OFF, use debugOn to enable stdout of dumps")
+  t.debug = false
 
   t.VehicleList = nil
   t.DataRequestMap = make(map[string]rest_cmds)
@@ -186,6 +193,14 @@ func New() *MyTesla{
 
   return t
 
+}
+
+func (et *MyTesla) debugOn(){
+  et.debug = true
+}
+
+func (et *MyTesla) debugOff(){
+  et.debug = false
 }
 
 func (et *MyTesla) dataRequestMapAdd(name string, args string, desc string){
@@ -219,10 +234,25 @@ func (et *MyTesla) AddOwner(){
 
 }
 
+func (et *MyTesla) AddVehicleId(id string){
+
+   et.myDB.AddVehicleId(id);
+
+}
+
 func (et *MyTesla) GetOwner() (bool){
 
   return et.myDB.GetOwner(&et.email, &et.accessToken,
                                 &et.refreshToken, &et.expiresTime)
+
+}
+
+func (et *MyTesla) GetVehicleId() (bool, string){
+
+  var id string
+
+  return et.myDB.GetVehicleId(&id), id
+  
 
 }
 
@@ -232,13 +262,19 @@ func (et *MyTesla) DelOwner() (bool){
 
 }
 
+func (et *MyTesla) DelVehicleId() (bool){
+
+  return et.myDB.DelVehicleId()
+
+}
+
 func (et *MyTesla) RefreshToken(skipLogin bool) bool{
 
   if(!skipLogin){ // if skipping we already have the owner info
     et.Login() // the act of logging in will populate this info
   }
 
-  fmt.Println("Starting RefreshToken")
+  logmsg.Print(logmsg.Info, "Starting RefreshToken")
 
   r := restapi.NewPost("authentication", et.refreshtokenURL(et.clientID,
                                                           et.clientSecret,
@@ -281,7 +317,7 @@ func (et *MyTesla) WakeCmd(id string) bool{
     stateStr = et.Wake.GetValueString("state")
 
     if(strings.Compare(stateStr,"online") == 0){
-      et.Wake.Dump()
+      if(et.debug){ et.Wake.Dump() }
       return true
     }
 
@@ -310,7 +346,7 @@ func (et *MyTesla) SetChargeLimitCmd(id string, percent_value string) bool{
   et.Setchargelimit.SetPostJson(jsonstr)
 
   if(et.Setchargelimit.Send()){
-    et.Setchargelimit.Dump()
+    if(et.debug){et.Setchargelimit.Dump()}
   }else{
     logmsg.Print(logmsg.Error,"Setchargelimit"," Failed ", id)
     return false
@@ -322,7 +358,7 @@ func (et *MyTesla) SetChargeLimitCmd(id string, percent_value string) bool{
     stateStr = et.wake.GetValueString("state")
 
     if(strings.Compare(stateStr,"online") == 0){
-      et.wake.Dump()
+      if(et.debug){et.wake.Dump()}
       return true
     }
 
@@ -341,14 +377,14 @@ func (et *MyTesla) DataRequest(id string, cmd string) bool{
 
   r := et.DataRequestMap[cmd]
 
-  if(r.obj == nil){ // not setup before
+  if(r.Obj == nil){ // not setup before
     url := fmt.Sprintf("%s/api/1/vehicles/%s/data_request/%s", TESLA_API_URL, id, cmd)
-    r.obj = restapi.NewGet(r.cmd, url) 
-    r.obj.SetBearerAccessToken(et.accessToken)
-    r.obj.HasInnerMap("response")
+    r.Obj = restapi.NewGet(r.cmd, url) 
+    r.Obj.SetBearerAccessToken(et.accessToken)
+    r.Obj.HasInnerMap("response")
   }
 
-  if(r.obj.Send()){
+  if(r.Obj.Send()){
     //et.tmpobj.Dump()
   }else{
     logmsg.Print(logmsg.Error,cmd," Failed ", id)
@@ -395,7 +431,7 @@ func (et *MyTesla) GetVehicleCmd(id string) bool{
   et.SingleVehicle.HasInnerMap("response")
 
   if(et.SingleVehicle.Send()){
-    et.SingleVehicle.Dump()
+    if(et.debug){et.SingleVehicle.Dump()}
   }else{
     logmsg.Print(logmsg.Error,"get vehicle failed:", id)
     return false
@@ -405,7 +441,6 @@ func (et *MyTesla) GetVehicleCmd(id string) bool{
   //vehicle := new(RestVehicles)
 
   if(!et.SingleVehicle.sendGetSingleVehicle(id, et.accessToken)){
-    fmt.Println("GET Vehicle failed");
     logmsg.Print(logmsg.Error,"GET Vehicle failed")
     return false
   }
@@ -440,7 +475,6 @@ func (et *MyTesla) GetVehicleListCmd() bool{
 
 /*
   if(!et.VehicleList.sendGetVehicleList(et.accessToken)){
-    fmt.Println("GET Vehicles failed");
     logmsg.Print(logmsg.Error,"GET Vehicles failed")
     return false
   }
@@ -482,7 +516,7 @@ func (et *MyTesla) Login() bool{
 
   dberr := et.GetSecrets()
   if(!dberr){
-    fmt.Println("Yikes - DB error!.  Have you stored secrets?");
+    logmsg.Print(logmsg.Error, "Yikes - DB error!.  Have you stored secrets?");
     os.Exit(4);
   }
 
@@ -491,7 +525,7 @@ func (et *MyTesla) Login() bool{
 
   status := et.GetOwner()
 
-fmt.Println("owner status:", status)
+  logmsg.Print(logmsg.Info, "owner status: ", status)
 
   if(status){
 
@@ -521,12 +555,13 @@ fmt.Println("owner status:", status)
 */
 
     if(int(unixTime) >= (et.expiresTime - const_sec_twoweek)){
-      fmt.Println("Time to refresh")
+      logmsg.Print(logmsg.Info, "Time to refresh token")
       status = et.RefreshToken(true)  
     }
 
     if(status){
-      fmt.Println("Logined to [", et.email, "]")
+      //logmsg.Print(logmsg.Info, fmt.Sprintf("Logined to [", et.email, "]"))
+      logmsg.Print(logmsg.Info, "Logined to [", et.email, "]")
       return(true)
     }
 
@@ -534,13 +569,12 @@ fmt.Println("owner status:", status)
 
 
   logmsg.Print(logmsg.Warning,"AccessToken not found")
-  fmt.Println("AccessToken not found, need to authenticate")
 
   term := new(MyLogin)
   email1, passwd1, ok = term.TerminalLogin("Email Address", "Password")
 
   if(!ok){
-    fmt.Println("Failure to get credentials")
+    logmsg.Print(logmsg.Error, "Failure to get credentials")
     return(false)
   }
 
@@ -693,8 +727,8 @@ func (et *MyTesla) UpdateSecrets() bool{
 
   if ( (strings.Compare(client_id, "blank") == 0) || (strings.Compare(client_secret, "blank") == 0) ){
 
-    fmt.Println("Error getting client ID and or secret.  URL returned:")
-    fmt.Println(tmpstr)
+    logmsg.Print(logmsg.Error, "Error getting client ID and or secret.  URL returned:")
+    logmsg.Print(logmsg.Error, fmt.Sprintf(tmpstr))
     return false
   }
 

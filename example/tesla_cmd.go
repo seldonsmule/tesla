@@ -15,7 +15,7 @@ func main() {
   logmsg.SetLogFile("tesla.log");
   var EgcOptionCodes []string
 
-  myTL := tesla.New()
+  myTL := tesla.New("./tesla.db")
   //myTL.init()
 
   args := os.Args;

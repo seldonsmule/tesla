@@ -8,12 +8,14 @@ import "database/sql"
 //import "database/sql/driver"
 import  _ "github.com/mattn/go-sqlite3"
 
-const constDbName = "./tesla.db"
+//const constDbName = "./tesla.db"
 
 type MyDatabase struct {
 
   nerd int
   handle *sql.DB  // i figured out the type by using the %T to print out the variable
+
+  dbName string
 
 }
 
@@ -121,6 +123,60 @@ func (edb *MyDatabase) GetOwner(pEmail *string,
   return true
 }
 
+func (edb *MyDatabase) GetVehicleId(pId *string) (bool) {
+
+  var id string
+  var gotRow bool
+
+  sqlmsg := fmt.Sprintf("SELECT * FROM vehicle_id;");
+
+  rows, err := edb.handle.Query(sqlmsg);
+
+  if(err != nil){
+    logmsg.Print(logmsg.Error, "Error getting VehicleID Db error: ", err)
+    return false
+  }
+
+  defer rows.Close() // close the resource later 
+
+  gotRow = false;
+
+  for rows.Next(){
+//fmt.Println("in rows.Next loop")
+
+    gotRow = true;
+
+    err = rows.Scan(&id)
+
+    logmsg.Print(logmsg.Info, "VehicleId[",id,"]")
+
+    if(err != nil){
+      logmsg.Print(logmsg.Error, "Db error: ", err)
+      logmsg.Print(logmsg.Error, "Error getting VehicleID (not stored) Db error: ", err)
+      return false
+    }
+  }
+
+  if(!gotRow){
+    logmsg.Print(logmsg.Error, "VehicleId not set");
+    return false
+    
+  }
+
+  *pId = id
+
+  return true
+}
+
+func (edb *MyDatabase) DelVehicleId() bool {
+
+  sql := fmt.Sprintf("DELETE FROM vehicle_id;")
+
+  edb.handle.Exec(sql)
+
+  return true
+}
+
 func (edb *MyDatabase) DelOwner() bool {
 
   sql := fmt.Sprintf("DELETE FROM owner;")
@@ -147,6 +203,22 @@ func (edb *MyDatabase) AddOwner(email string,
 
   sql = fmt.Sprintf("INSERT INTO owner (email, access_token, refresh_token, expires_in) VALUES ('%s', '%s', '%s', '%d');",
                      email, accessToken, refreshToken, expiresTime)
+
+  edb.handle.Exec(sql)
+
+  return true
+}
+
+func (edb *MyDatabase) AddVehicleId(id string) (bool) {
+
+  // first delete any existing entry
+
+  sql := fmt.Sprintf("DELETE FROM vehicle_id;")
+
+  edb.handle.Exec(sql)
+
+  sql = fmt.Sprintf("INSERT INTO vehicle_id (id) VALUES ('%s');",
+                     id)
 
   edb.handle.Exec(sql)
 
@@ -224,12 +296,14 @@ func (edb *MyDatabase) AddApiDetails(clientId string, clientSecret string) bool{
 
   
 
-func (edb *MyDatabase) init(){
+func (edb *MyDatabase) init(dbName string){
 
   logmsg.Print(logmsg.Debug03, "in init");
-  logmsg.Print(logmsg.Debug03, constDbName)
 
-  db, err := sql.Open("sqlite3", constDbName)
+  edb.dbName = dbName
+  logmsg.Print(logmsg.Debug03, edb.dbName)
+
+  db, err := sql.Open("sqlite3", edb.dbName)
 
   edb.checkErr(err)
 
@@ -249,8 +323,17 @@ func (edb *MyDatabase) init(){
     logmsg.Print(logmsg.Error,"Unable to create table tamper")
   }
 
-  id , _ := machineid.ProtectedID(constDbName);
-fmt.Println(id)
+  if(!edb.createTable("vehicle_id", "CREATE TABLE `vehicle_id` (`id` VARCHAR(256) NULL) ") ){
+    logmsg.Print(logmsg.Error,"Unable to create table vehicle_id")
+  }
+
+  if(!edb.createTable("tamper", "CREATE TABLE `tamper` (`machineid` VARCHAR(256) NULL) ") ){
+    logmsg.Print(logmsg.Error,"Unable to create table tamper")
+  }
+
+  id , _ := machineid.ProtectedID(edb.dbName);
+
+  logmsg.Print(logmsg.Info, "machineid: ", id);
 
 
   sqlmsg := "select * from tamper limit 1";
@@ -273,17 +356,17 @@ fmt.Println(id)
 
   err = row.Scan(&mid)
   
-  fmt.Printf("mid = %s\n", mid)
+  logmsg.Print(logmsg.Info, "mid = ", mid)
 
   if(mid == ""){
-    fmt.Println("machine id not set")
+    logmsg.Print(logmsg.Error, "machine id not set")
 
     sqlinsert := fmt.Sprintf("INSERT INTO tamper (machineid) VALUES('%s');",
                              id)
-    fmt.Println(sqlinsert)
+    logmsg.Print(logmsg.Debug03, sqlinsert)
     edb.handle.Exec(sqlinsert)
   }else{
-    fmt.Println("we have the id")
+    logmsg.Print(logmsg.Info, "we have the id")
   }
 
 
@@ -291,7 +374,7 @@ fmt.Println(id)
 
 func (db *MyDatabase) hello(){
 
-  fmt.Println("hi there")
+  logmsg.Print(logmsg.Debug01, "hi there")
 }
 
 func (db *MyDatabase) Hello(){

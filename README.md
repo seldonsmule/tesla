@@ -15,3 +15,4 @@ go get golang.org/x/crypto/ssh/terminal
 go get github.com/denisbrodbeck/machineid
 
 You need to have access to a tesla and a login for this to work
+
