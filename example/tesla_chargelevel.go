@@ -6,7 +6,7 @@ import (
         "strconv"
 //        "math"
         "github.com/seldonsmule/logmsg"
-        "tesla"
+        "github.com/seldonsmule/tesla"
 )
 
 func help(){

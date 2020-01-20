@@ -5,12 +5,13 @@ pkg_dir = $(GOPATH)/pkg/darwin_amd64
 
 LOGMSG = $(pkg_dir)/github.com/seldonsmule/logmsg.a
 
-TESLIB = $(pkg_dir)/tesla.a
+TESLIB = $(pkg_dir)/github.com/seldonsmule/tesla.a
 
 all: $(TESLIB) tesla_admin tesla_cmd tesla_chargelevel
 
 clean:
 	go clean
+	echo $(TESLIB)
 	rm -f file.json
 	rm -f modelx.json
 	rm -f $(TESLIB)

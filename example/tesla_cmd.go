@@ -6,7 +6,7 @@ import (
         "github.com/seldonsmule/restapi"
         "strings"
         "github.com/seldonsmule/logmsg"
-        "tesla"
+        "github.com/seldonsmule/tesla"
 )
 
 
