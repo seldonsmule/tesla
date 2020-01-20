@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
+	"flag"
         "strings"
 //        "math"
         "github.com/seldonsmule/logmsg"
@@ -10,41 +11,64 @@ import (
 )
 
 func help(){
+  
 
   fmt.Println("tesla_admin - Admin command to setup the tesla.db for use with other commands")
   fmt.Println()
-  fmt.Println("Addsecrets - Add Tesla API secrets - needed for all APIs")
-  fmt.Println("getsecrets - Displays Tesla API secrets - needed for all APIs")
-  fmt.Println("updatesecrets - Updates Tesla API secrets - needed for all APIs")
-  fmt.Println("login - Sets up login info")
-  fmt.Println("refreshtoke - Refreshes token created via login")
-  fmt.Println("getowner - Shows owner details")
-  fmt.Println("delowner - Deletes owner details")
-  fmt.Println("setid - Stores vehicle ID for the cmds")
-  fmt.Println("getid - Display vehicle ID for the cmds")
-  fmt.Println("getvehiclelist - Displays a list of vehicles and their IDs owned by the login")
-  fmt.Println("help - Display this help")
+  flag.PrintDefaults()
+  fmt.Println()
+  fmt.Println("cmds:")
+  fmt.Println("     Addsecrets - Add Tesla API secrets - needed for all APIs")
+  fmt.Println("     getsecrets - Displays Tesla API secrets - needed for all APIs")
+  fmt.Println("     updatesecrets - Updates Tesla API secrets - needed for all APIs")
+  fmt.Println("     login - Sets up login info")
+  fmt.Println("     refreshtoke - Refreshes token created via login")
+  fmt.Println("     getowner - Shows owner details")
+  fmt.Println("     delowner - Deletes owner details")
+  fmt.Println("     setid - Stores vehicle ID for the cmds.  Requires -vid")
+  fmt.Println("     getid - Display vehicle ID for the cmds")
+  fmt.Println("     getvehiclelist - Displays a list of vehicles and their IDs owned by the login")
+  fmt.Println("     help - Display this help")
 
 }
 
 
 func main() {
 
-  logmsg.SetLogFile("tesla_admin.log");
-  var EgcOptionCodes []string
+  dirPtr := flag.String("rundir", "./", "Directory to exec from")
+  databasePtr := flag.String("dbname", "tesla.db", "Name of database")
+  cmdPtr := flag.String("cmd", "help", "Command to run")
+  vidPtr := flag.String("vid", "notset", "VehicleId")
+  clientidPtr := flag.String("clientid", "notset", "API Client ID")
+  clientsecPtr := flag.String("clientsec", "notset", "API Client Secret")
 
-  myTL := tesla.New("./tesla.db")
+  flag.Parse()
 
-  args := os.Args;
 
-  if(len(args) < 2){
-    fmt.Println("To few arguments\n");
+  // if help, the user did not set it
+  if(*cmdPtr == "help"){
     help()
-    os.Exit(1);
+    os.Exit(1)
   }
 
+  logName := fmt.Sprintf("%s/tesla_admin.log", *dirPtr)
+  dbName := fmt.Sprintf("%s/%s",*dirPtr, *databasePtr)
 
-  switch args[1]{
+  logmsg.SetLogFile(logName);
+
+  logmsg.Print(logmsg.Info, "dirPtr = ", *dirPtr)
+  logmsg.Print(logmsg.Info, "databasePtr = ", *databasePtr)
+  logmsg.Print(logmsg.Info, "cmdPtr = ", *cmdPtr)
+  logmsg.Print(logmsg.Info, "vidPtr = ", *vidPtr)
+  logmsg.Print(logmsg.Info, "clientidPtr = ", *clientidPtr)
+  logmsg.Print(logmsg.Info, "clientsecPtr = ", *clientsecPtr)
+  logmsg.Print(logmsg.Info, "tail = ", flag.Args())
+
+  var EgcOptionCodes []string
+
+  myTL := tesla.New(dbName)
+
+  switch *cmdPtr {
 
     case "login":
       if(!myTL.Login()){
@@ -59,11 +83,11 @@ func main() {
       myTL.UpdateSecrets()
 
     case "setid":
-      if(len(args) < 3){
-        fmt.Println("Missing Vehicle ID\n");
+      if(*vidPtr == "notset"){
+        fmt.Println("Missing Vehicle ID.  Use -vid\n");
         os.Exit(1);
       }
-      myTL.AddVehicleId(args[2])
+      myTL.AddVehicleId(*vidPtr)
 
     case "getid":
 
@@ -142,13 +166,18 @@ func main() {
     
 
     case "addsecrets":
-      if(len(args) < 4){
-        fmt.Println("addsecrets missing values\n\n");
+  
+      if(*clientidPtr == "notset"){
+        fmt.Println("addsecrets -clientid not set\n\n");
+        os.Exit(2);
+      }
+      if(*clientsecPtr == "notset"){
+        fmt.Println("addsecrets -clientsec not set\n\n");
         os.Exit(2);
       }
 
-      myTL.SetClientID(args[2])
-      myTL.SetClientSecret(args[3])
+      myTL.SetClientID(*clientidPtr)
+      myTL.SetClientSecret(*clientsecPtr)
 
       myTL.AddSecrets();
      

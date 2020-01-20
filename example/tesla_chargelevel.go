@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"fmt"
+	"flag"
         "strconv"
 //        "math"
         "github.com/seldonsmule/logmsg"
@@ -13,15 +14,18 @@ func help(){
 
   fmt.Println("tesla_chargelevel - Simple command to run from cron to reest the charging levels")
   fmt.Println()
-  fmt.Println("wake - Wake up vehicle")
-  fmt.Println("setchargelimit - Set charge limit for next charge")
-  fmt.Println("getchargelimit - Get charge limit for next charge")
-  fmt.Println("batterylevel - Get current battery level")
-  fmt.Println("homesetto50 - If vehicle is home, set to 50% charge limit")
-  fmt.Println("homesetto80 - If vehicle is home, set to 80% charge limit")
-  fmt.Println("homecharge - If vehicle is home, use lowlimitlevel and highlimit level to adjust next charge limit")
-  fmt.Println("             lowlimitlevel - Level to set to so car does not charge every night")
-  fmt.Println("             highlimitlevel - Level to set to so car for next charge IF car is at low (or below) lowlevellimit")
+  flag.PrintDefaults()
+  fmt.Println()
+  fmt.Println("cmds:")
+  fmt.Println("     wake - Wake up vehicle")
+  fmt.Println("     setchargelimit - Set charge limit for next charge. Use -limit")
+  fmt.Println("     getchargelimit - Get charge limit for next charge")
+  fmt.Println("     batterylevel - Get current battery level")
+  fmt.Println("     homesetto50 - If vehicle is home, set to 50% charge limit")
+  fmt.Println("     homesetto80 - If vehicle is home, set to 80% charge limit")
+  fmt.Println("     homecharge - If vehicle is home, use -lowlimit and -highlimit level to adjust next charge limit")
+  fmt.Println("             -lowlimit - Level to set to so car does not charge every night")
+  fmt.Println("             -highlimit - Level to set to so car for next charge IF car is at low (or below) -lowlimit")
   fmt.Println("             NOTE: If set to 100 already and car is below - will skip adjustments.  If charged, will set to low limit")
 
 }
@@ -29,20 +33,36 @@ func help(){
 
 func main() {
 
-  logmsg.SetLogFile("tesla_chargelvl.log");
+  dirPtr := flag.String("rundir", "./", "Directory to exec from")
+  databasePtr := flag.String("dbname", "tesla.db", "Name of database")
+  cmdPtr := flag.String("cmd", "help", "Command to run")
+  limitPtr := flag.String("limit", "notset", "charge limit - used with setchargelimit")
+  lowlimitPtr := flag.String("lowlimit", "notset", "charge low limit - used with homecharge")
+  highlimitPtr := flag.String("highlimit", "notset", "charge high limit - used with homecharge")
 
-  myTL := tesla.New("./tesla.db")
+  flag.Parse()
 
-  args := os.Args;
+  logName := fmt.Sprintf("%s/tesla_chargelvl.log", *dirPtr)
+  dbName := fmt.Sprintf("%s/%s",*dirPtr, *databasePtr)
 
-  if(len(args) < 2){
-    fmt.Println("To few arguments\n");
+  logmsg.SetLogFile(logName);
+
+
+  logmsg.Print(logmsg.Info, "dirPtr = ", *dirPtr)
+  logmsg.Print(logmsg.Info, "databasePtr = ", *databasePtr)
+  logmsg.Print(logmsg.Info, "cmdPtr = ", *cmdPtr)
+  logmsg.Print(logmsg.Info, "tail = ", flag.Args())
+
+
+  if(*cmdPtr == "help"){
     help()
     os.Exit(1);
   }
 
+  myTL := tesla.New(dbName)
 
-  switch args[1]{
+
+  switch *cmdPtr {
 
     case "wake":
 
@@ -52,6 +72,7 @@ func main() {
         fmt.Println("VehicleId: ", vid)
       }else{
         fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Printf("use tesla_admin -cmd setid -vid -rundir=%s to setup\n\n", *dirPtr)
         os.Exit(1);
       }
 
@@ -60,8 +81,8 @@ func main() {
       }
 
     case "setchargelimit":
-      if(len(args) < 3){
-        fmt.Println("Missing charge limit value\n");
+      if(*limitPtr == "notset"){
+        fmt.Println("Missing charge limit value. Use -limit\n");
         os.Exit(1);
       }
 
@@ -77,7 +98,7 @@ func main() {
       myTL.WakeCmd(vid)
 
 
-      if(myTL.SetChargeLimitCmd(vid, args[2])){
+      if(myTL.SetChargeLimitCmd(vid, *limitPtr)){
         fmt.Println("SetChargeLimiit worked")
       }
 
@@ -127,15 +148,18 @@ func main() {
 
     case "homecharge":
     
-      if(len(args) < 4){
-        fmt.Println("Missing charge high/low\n");
-        fmt.Println("Usage: tesla_chargelevel low high");
-        fmt.Println("If at or below low range, set to high charging level")
+      if(*lowlimitPtr == "notset"){
+        fmt.Println("Missing charge low limit value. Use -lowlimit\n");
         os.Exit(1);
       }
 
-      lowlvl, _ := strconv.ParseFloat(args[2], 64)
-      highlvl, _ := strconv.ParseFloat(args[3], 64)
+      if(*highlimitPtr == "notset"){
+        fmt.Println("Missing charge high limit value. Use -highlimit\n");
+        os.Exit(1);
+      }
+
+      lowlvl, _ := strconv.ParseFloat(*lowlimitPtr, 64)
+      highlvl, _ := strconv.ParseFloat(*highlimitPtr, 64)
 
 
       rtn, vid := myTL.GetVehicleId()
@@ -345,8 +369,8 @@ fmt.Printf("highlvl type: %T\n", highlvl)
 
       myTL.WakeCmd(vid)
 
-      if(myTL.DataRequest(vid, args[1])){
-        r := myTL.DataRequestMap[args[1]]
+      if(myTL.DataRequest(vid, *cmdPtr)){
+        r := myTL.DataRequestMap[*cmdPtr]
         r.Dump()
       }
 
