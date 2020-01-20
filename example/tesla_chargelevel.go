@@ -51,6 +51,9 @@ func main() {
   logmsg.Print(logmsg.Info, "dirPtr = ", *dirPtr)
   logmsg.Print(logmsg.Info, "databasePtr = ", *databasePtr)
   logmsg.Print(logmsg.Info, "cmdPtr = ", *cmdPtr)
+  logmsg.Print(logmsg.Info, "limitPtr = ", *limitPtr)
+  logmsg.Print(logmsg.Info, "lowlimitPtr = ", *lowlimitPtr)
+  logmsg.Print(logmsg.Info, "highlimitPtr = ", *highlimitPtr)
   logmsg.Print(logmsg.Info, "tail = ", flag.Args())
 
 
