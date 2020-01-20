@@ -7,7 +7,7 @@ LOGMSG = $(pkg_dir)/github.com/seldonsmule/logmsg.a
 
 TESLIB = $(pkg_dir)/github.com/seldonsmule/tesla.a
 
-all: $(TESLIB) tesla_admin tesla_cmd tesla_chargelevel
+all: $(TESLIB) $(GOPATH)/bin/tesla_admin $(GOPATH)/bin/tesla_cmd $(GOPATH)/bin/tesla_chargelevel
 
 clean:
 	go clean
@@ -15,22 +15,25 @@ clean:
 	rm -f file.json
 	rm -f modelx.json
 	rm -f $(TESLIB)
-	rm -f tesla_admin
-	rm -f tesla_cmd
-	rm -f tesla_chargelevel
+	rm -f $(GOPATH)/bin/tesla_admin
+	rm -f $(GOPATH)/bin/tesla_cmd
+	rm -f $(GOPATH)/bin/tesla_chargelevel
 
 $(TESLIB): file.json modelx.json $(LOGMSG) db.go tesla.go
 	go build
 	go install
 
-tesla_admin: example/tesla_admin.go tesla.go
+$(GOPATH)/bin/tesla_admin: example/tesla_admin.go tesla.go
 	go build example/tesla_admin.go
+	mv tesla_admin $(GOPATH)/bin
 
-tesla_cmd: example/tesla_cmd.go tesla.go
+$(GOPATH)/bin/tesla_cmd: example/tesla_cmd.go tesla.go
 	go build example/tesla_cmd.go
+	mv tesla_cmd $(GOPATH)/bin
 
-tesla_chargelevel: example/tesla_chargelevel.go tesla.go
+$(GOPATH)/bin/tesla_chargelevel: example/tesla_chargelevel.go tesla.go
 	go build example/tesla_chargelevel.go
+	mv tesla_chargelevel $(GOPATH)/bin
 
 $(LOGMSG): 
 	make deps
