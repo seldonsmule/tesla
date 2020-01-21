@@ -28,16 +28,13 @@ func (edb *MyDatabase) checkErr(err error) {
 
 func (edb *MyDatabase) createTable(tableName string, tableSql string) bool{
 
-  var sqlmsg string
-
   if(edb.handle == nil){
     logmsg.Print(logmsg.Error, "database handle not initiated");
     return false
   }
 
-  sqlmsg = fmt.Sprintf("select 1 from %s limit 1", tableName);
+  row, err := edb.handle.Query("select 1 from $1 limit 1", tableName);
 
-  row, err := edb.handle.Query(sqlmsg);
   _ = row // found a way to undo the variable since we don't really need it
           // and we get an error otherwise.  I am sure some geek will comment
           // on how bad this code is :)
@@ -78,9 +75,9 @@ func (edb *MyDatabase) GetOwner(pEmail *string,
   var expires time.Time
 
 
-  sqlmsg := fmt.Sprintf("SELECT * FROM owner;");
+  //sqlmsg := fmt.Sprintf("SELECT * FROM owner;");
 
-  rows, err := edb.handle.Query(sqlmsg);
+  rows, err := edb.handle.Query("SELECT * FROM owner;");
 
   if(err != nil){
     logmsg.Print(logmsg.Error, "Db error: ", err)
@@ -128,9 +125,9 @@ func (edb *MyDatabase) GetVehicleId(pId *string) (bool) {
   var id string
   var gotRow bool
 
-  sqlmsg := fmt.Sprintf("SELECT * FROM vehicle_id;");
+  //sqlmsg := fmt.Sprintf("SELECT * FROM vehicle_id;");
 
-  rows, err := edb.handle.Query(sqlmsg);
+  rows, err := edb.handle.Query("SELECT * FROM vehicle_id;");
 
   if(err != nil){
     logmsg.Print(logmsg.Error, "Error getting VehicleID Db error: ", err)
@@ -170,18 +167,18 @@ func (edb *MyDatabase) GetVehicleId(pId *string) (bool) {
 
 func (edb *MyDatabase) DelVehicleId() bool {
 
-  sql := fmt.Sprintf("DELETE FROM vehicle_id;")
+  //sql := fmt.Sprintf("DELETE FROM vehicle_id;")
 
-  edb.handle.Exec(sql)
+  edb.handle.Exec("DELETE FROM vehicle_id;")
 
   return true
 }
 
 func (edb *MyDatabase) DelOwner() bool {
 
-  sql := fmt.Sprintf("DELETE FROM owner;")
+  //sql := fmt.Sprintf("DELETE FROM owner;")
 
-  edb.handle.Exec(sql)
+  edb.handle.Exec("DELETE FROM owner;")
 
   return true
 }
@@ -197,14 +194,15 @@ func (edb *MyDatabase) AddOwner(email string,
 
   // first delete any existing entry
 
-  sql := fmt.Sprintf("DELETE FROM owner;")
+  //sql := fmt.Sprintf("DELETE FROM owner;")
 
-  edb.handle.Exec(sql)
+  edb.handle.Exec("DELETE FROM owner;")
 
-  sql = fmt.Sprintf("INSERT INTO owner (email, access_token, refresh_token, expires_in) VALUES ('%s', '%s', '%s', '%d');",
+//  sql = fmt.Sprintf("INSERT INTO owner (email, access_token, refresh_token, expires_in) VALUES ('%s', '%s', '%s', '%d');",
+//                     email, accessToken, refreshToken, expiresTime)
+
+  edb.handle.Exec("INSERT INTO owner (email, access_token, refresh_token, expires_in) VALUES ($1, $2, $3, $4);",
                      email, accessToken, refreshToken, expiresTime)
-
-  edb.handle.Exec(sql)
 
   return true
 }
@@ -213,14 +211,14 @@ func (edb *MyDatabase) AddVehicleId(id string) (bool) {
 
   // first delete any existing entry
 
-  sql := fmt.Sprintf("DELETE FROM vehicle_id;")
+//  sql := fmt.Sprintf("DELETE FROM vehicle_id;")
 
-  edb.handle.Exec(sql)
+  edb.handle.Exec("DELETE FROM vehicle_id;")
 
-  sql = fmt.Sprintf("INSERT INTO vehicle_id (id) VALUES ('%s');",
-                     id)
+//  sql = fmt.Sprintf("INSERT INTO vehicle_id (id) VALUES ('%s');",
+//                     id)
 
-  edb.handle.Exec(sql)
+  edb.handle.Exec("INSERT INTO vehicle_id (id) VALUES ($1);", id)
 
   return true
 }
@@ -233,9 +231,9 @@ func (edb *MyDatabase) GetApiDetails(pId *string, pSecret *string) (bool){
 //  var id int
   var gotRow bool
 
-  sqlmsg := fmt.Sprintf("SELECT * FROM api_details LIMIT 1;");
+  //sqlmsg := fmt.Sprintf("SELECT * FROM api_details LIMIT 1;");
 
-  rows, err := edb.handle.Query(sqlmsg);
+  rows, err := edb.handle.Query("SELECT * FROM api_details LIMIT 1;");
 
   if(err != nil){
     logmsg.Print(logmsg.Error, "Db error: ", err)
@@ -272,7 +270,7 @@ func (edb *MyDatabase) GetApiDetails(pId *string, pSecret *string) (bool){
 
 func (edb *MyDatabase) AddApiDetails(clientId string, clientSecret string) bool{
 
-  var sql2 string
+  //var sql2 string
 
   c := clientId
   s := clientSecret
@@ -283,13 +281,13 @@ func (edb *MyDatabase) AddApiDetails(clientId string, clientSecret string) bool{
 
   // first delete any existing entry
 
-  sql := fmt.Sprintf("DELETE FROM api_details;")
+//  sql := fmt.Sprintf("DELETE FROM api_details;")
 
-  edb.handle.Exec(sql)
+  edb.handle.Exec("DELETE FROM api_details;")
 
-  sql2 = fmt.Sprintf("INSERT INTO api_details (client_id, client_secret) VALUES ('%s', '%s');", c, s)
+  //sql2 = fmt.Sprintf("INSERT INTO api_details (client_id, client_secret) VALUES ('%s', '%s');", c, s)
 
-  edb.handle.Exec(sql2)
+  edb.handle.Exec("INSERT INTO api_details (client_id, client_secret) VALUES ($1, $2);", c, s)
 
   return true
 }
@@ -336,9 +334,10 @@ func (edb *MyDatabase) init(dbName string){
   logmsg.Print(logmsg.Info, "machineid: ", id);
 
 
-  sqlmsg := "select * from tamper limit 1";
+  //sqlmsg := "select * from tamper limit 1";
 
-  row, err := edb.handle.Query(sqlmsg);
+  row, err := edb.handle.Query("select * from tamper limit 1;")
+
   //_ = row // found a way to undo the variable since we don't really need it
           // and we get an error otherwise.  I am sure some geek will comment
           // on how bad this code is :)
@@ -361,10 +360,11 @@ func (edb *MyDatabase) init(dbName string){
   if(mid == ""){
     logmsg.Print(logmsg.Error, "machine id not set")
 
-    sqlinsert := fmt.Sprintf("INSERT INTO tamper (machineid) VALUES('%s');",
+//    sqlinsert := fmt.Sprintf("INSERT INTO tamper (machineid) VALUES('%s');",
+//                             id)
+//    logmsg.Print(logmsg.Debug03, sqlinsert)
+    edb.handle.Exec("INSERT INTO tamper (machineid) VALUES($1);",
                              id)
-    logmsg.Print(logmsg.Debug03, sqlinsert)
-    edb.handle.Exec(sqlinsert)
   }else{
     logmsg.Print(logmsg.Info, "we have the id")
   }
