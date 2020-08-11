@@ -45,17 +45,11 @@ Provides information about a specific vehicle based on the vehicle ID
 
 ## Get Information
 Provides a json of different types of information about the vehicle.  See the API documentation links provided above for the details
-### service_data
-### Charge state
-### Drive state
-### GUI settings
-### Vehicle state
-### Vehicle config
-### Near By Charging
+### Service data, Charge state, Drive state, GUI settings, Vehicle state, Vehicle config, Near By Charging
 
 ## Set Information
-Allows for the setting various items on the vehicle
-### setchargelimit
+Allows for the setting various items on the vehicle.  At this point, the class only implemeted a call to **setchargelimit**.  Others can be added as needed
+### Set Charge Limit
 Sets the charging limit from 50-100% for the next charging cycle
 
 
