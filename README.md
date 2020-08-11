@@ -1,8 +1,13 @@
 # Telsa class
 This class is an example of how to use the unpublished tesla APIs to get information about a tesla and to change settings.
+# Needed documentation
+The class uses the unpublished Tesla API to access a Telsa.  Below are two different references.  Both write-ups were needed to figure out how to communicate.
+### https://tesla-api.timdorr.com
+### https://www.teslaapi.io
+### https://pastebin.com/pS7Z6yyP
+Secret values for the Authentication
 
 # Capabilities
-The class uses the unpublished Tesla API (https://tesla-api.timdorr.com) to access a Tesla.
 
 ## Setup (house keeping)
 These methods are used setup the authentication information into a database for future use with the Tesla API. The class has an sqlite3 database to store this information. **It is recommend that you look at how to do a better job of securing this information.  This is just an example.**
@@ -31,23 +36,27 @@ Provides details about the owner of the Tesla as stored in the database.  ***Doe
 ### delete owner
 Removes all information from the database
 
-## updatesecrets
-## get secrets
-## add secrets
-## refreshtoken
-## getowner
-## delowner
-## wake
-## setchargelimit
-## service_data
-## charge_state
-## drive_state
-## gui_settings
-## vehicle_state
-## vehicle_config
-## nearbycharging
-## getvehicle
-## getvehicle list
+# Vehicle
+All of the get/set commands require the unique vehicle ID.  These methods provide two ways to get that information.  See https://tesla-api.timdorr.com/api-basics/vehicles for details
+### Get Vehicle list
+List of all vehicles registered to a single Telsa account - **email address**
+### Get Vehicle
+Provides information about a specific vehicle based on the vehicle ID
+
+## Get Information
+Provides a json of different types of information about the vehicle.  See the API documentation links provided above for the details
+### service_data
+### Charge state
+### Drive state
+### GUI settings
+### Vehicle state
+### Vehicle config
+### Near By Charging
+
+## Set Information
+Allows for the setting various items on the vehicle
+### setchargelimit
+Sets the charging limit from 50-100% for the next charging cycle
 
 
 
@@ -55,12 +64,7 @@ Removes all information from the database
 
 # Dependancies
 
-Inital code to access a tesla
-
-More doc coming later
-
-
-Add these packages
+## Add these packages
 go get github.com/mattn/go-sqlite3
 
 go get github.com/seldonsmule/logmsg
@@ -70,6 +74,4 @@ go get github.com/seldonsmule/restapi
 go get golang.org/x/crypto/ssh/terminal
 
 go get github.com/denisbrodbeck/machineid
-
-You need to have access to a tesla and a login for this to work
 
