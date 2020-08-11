@@ -5,10 +5,20 @@ This class is an example of how to use the unpublished tesla APIs to get informa
 The class uses the unpublished Tesla API (https://tesla-api.timdorr.com) to access a Tesla.
 
 ## Setup (house keeping)
-These methods are 
+These methods are used setup the authentication information into a database for future use with the Tesla API. The class has an sqlite3 database to store this information. **It is recommend that you look at how to do a better job of securing this information.  This is just an example.**
 
-## login
-Provides authentication.  Uses the user id and password of the tesla mobile app.  Will receive a token that is used for auth going forward.  The class has an sqlite3 database to store this information. **It is recommend that you look at how to do a better job of securing this information.  This is just an example.**
+### Secrets
+These are referenced in the authentication piece of the API.  They are setup to be modified in the database in case they change. They never have changed since this project was started.  The latest versions are here: https://pastebin.com/pS7Z6yyP
+#### add secrets - adds client id and client secret to database
+#### get secrets - gets the current values
+#### updates secrets changes the current values
+
+
+## Authentication
+Provides authentication.  Uses the user id and password of the tesla mobile app.  Will receive a token that is used for auth going forward.  
+#### login
+#### refreshtoken
+#### wake
 
 ## updatesecrets
 ## get secrets
