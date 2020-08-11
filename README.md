@@ -9,16 +9,27 @@ These methods are used setup the authentication information into a database for 
 
 ### Secrets
 These are referenced in the authentication piece of the API.  They are setup to be modified in the database in case they change. They never have changed since this project was started.  The latest versions are here: https://pastebin.com/pS7Z6yyP
-#### add secrets - adds client id and client secret to database
-#### get secrets - gets the current values
-#### updates secrets changes the current values
+#### add secrets
+Adds client id and client secret to database
+#### get secrets
+Gets the current values
+#### updates secrets
+Changes the current values
 
 
 ## Authentication
-Provides authentication.  Uses the user id and password of the tesla mobile app.  Will receive a token that is used for auth going forward.  
+Provides authentication.  Uses the user id and password of the tesla mobile app.  Will receive a token that is used for auth going forward. The class has an sqlite3 database to store this information. **It is recommend that you look at how to do a better job of securing this information.  This is just an example.**
+
 #### login
+If a valid OAuth token is not available, will prompt for user id and password
 #### refreshtoken
+Refreshes the token so user id/password prompting is not required.  **login** above will auto call **refreshtoken** based on the time to live value in the token
 #### wake
+Wakes up the Telsa's computer for conversations with the rest of the APIs.  From lots of testing, the **wake** command is important to have responded as successful.  You can complete a **login** succesfully, but the car will not respond.  ***Even if you have just completed talking to the car, it goes to sleep quickly :)***
+### get owner
+Provides details about the owner of the Tesla as stored in the database.  ***Does not show password, but does show email and token information***
+### delete owner
+Removes all information from the database
 
 ## updatesecrets
 ## get secrets
