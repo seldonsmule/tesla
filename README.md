@@ -54,7 +54,82 @@ Sets the charging limit from 50-100% for the next charging cycle
 
 
 
-# Example/Utilties
+# Example code
+## tesla_cmd - Demo of how to use the tesla.go class
+```
+tesla login | getvehiclelist | addsecrets | getsecrets | getowner | delowner | refreshtoken | getvehiclelist | getchargestate | getclimatestate | updatesecrets 
+
+
+Get State Cmds
+nearbycharging vehicle_id : Gets vehicle state data
+service_data vehicle_id : Gets service data
+charge_state vehicle_id : Gts charge state data
+climate_state vehicle_id : Gets climate state data
+drive_state vehicle_id : Gets drive state data
+gui_settings vehicle_id : Gets gui settings data
+vehicle_config vehicle_id : Gets vehicle config data
+vehicle_state vehicle_id : Gets vehicle state data
+
+Set Cmds
+wake vehicle_id - Wake up Vehicle
+setchargelimit vehicle_id percent - Sets the charge limit
+```
+# Utilities
+## tesla_admin - Admin command to setup the tesla.db for use with other utilities
+```
+  -clientid string
+    	API Client ID (default "notset")
+  -clientsec string
+    	API Client Secret (default "notset")
+  -cmd string
+    	Command to run (default "help")
+  -dbname string
+    	Name of database (default "tesla.db")
+  -rundir string
+    	Directory to exec from (default "./")
+  -vid string
+    	VehicleId (default "notset")
+
+cmds:
+     Addsecrets - Add Tesla API secrets - needed for all APIs
+     getsecrets - Displays Tesla API secrets - needed for all APIs
+     updatesecrets - Updates Tesla API secrets - needed for all APIs
+     login - Sets up login info
+     refreshtoke - Refreshes token created via login
+     getowner - Shows owner details
+     delowner - Deletes owner details
+     setid - Stores vehicle ID for the cmds.  Requires -vid
+     getid - Display vehicle ID for the cmds
+     getvehiclelist - Displays a list of vehicles and their IDs owned by the login
+     help - Display this help
+```
+## tesla_chargelevel - Simple command to run from cron to reest the charging levels
+```
+  -cmd string
+    	Command to run (default "help")
+  -dbname string
+    	Name of database (default "tesla.db")
+  -highlimit string
+    	charge high limit - used with homecharge (default "notset")
+  -limit string
+    	charge limit - used with setchargelimit (default "notset")
+  -lowlimit string
+    	charge low limit - used with homecharge (default "notset")
+  -rundir string
+    	Directory to exec from (default "./")
+
+cmds:
+     wake - Wake up vehicle
+     setchargelimit - Set charge limit for next charge. Use -limit
+     getchargelimit - Get charge limit for next charge
+     batterylevel - Get current battery level
+     homesetto50 - If vehicle is home, set to 50% charge limit
+     homesetto80 - If vehicle is home, set to 80% charge limit
+     homecharge - If vehicle is home, use -lowlimit and -highlimit level to adjust next charge limit
+             -lowlimit - Level to set to so car does not charge every night
+             -highlimit - Level to set to so car for next charge IF car is at low (or below) -lowlimit
+             NOTE: If set to 100 already and car is below - will skip adjustments.  If charged, will set to low limit
+```
 
 # Dependancies
 
