@@ -1,3 +1,6 @@
+# Telsa class
+This class is an example of how to use the unpublished tesla APIs to get information about a tesla and to change settings.
+
 Inital code to access a tesla
 
 More doc coming later
