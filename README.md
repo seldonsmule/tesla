@@ -1,3 +1,5 @@
+3/6/2021 - updated for new tesla authentication method
+
 # Telsa class
 This class is an example of how to use the unpublished tesla APIs to get information about a tesla and to change settings.
 # Needed documentation
