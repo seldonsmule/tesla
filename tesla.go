@@ -9,6 +9,10 @@ import (
         "strings"
 	"net/http"
 	"io/ioutil"
+        "io"
+        "crypto/rand"
+        "crypto/sha256"
+        "encoding/base64"
         "encoding/json"
         "github.com/seldonsmule/logmsg"
 )
@@ -45,6 +49,14 @@ type MyTesla struct {
   clientSecret string
   clientID     string
 
+  // for new tesla sso auth - begin
+  
+  SSO_state        string
+  SSO_challenge    string
+  SSO_challengeSum string
+
+  // for new tesla sso auth - end
+
   accessToken string
   email string
   refreshToken string
@@ -60,6 +72,7 @@ type MyTesla struct {
   Wake *restapi.Restapi
   Setchargelimit *restapi.Restapi
   NearbyCharging *restapi.Restapi
+  SSOrefreshtoken *restapi.Restapi
 
   DataRequestMap map[string]rest_cmds
 
@@ -93,6 +106,21 @@ func (et *MyTesla) authenticationURL(id string, sec string, email string, pwd st
 
 }
 
+func (et *MyTesla) SSOauthorizeURL() string{
+
+  url := fmt.Sprintf("https://auth.tesla.com/oauth2/v3/authorized?client_id=%s&code_challenge=%s&code_challenge_method=%s&redirect_uri=%s&response_type=%s&scope=%s&state=%s",
+                    "ownerapi", 
+                    et.SSO_challengeSum,
+                    "S256",
+                    "https://auth.tesla.com/void/callback",
+                    "code",
+                    "openid email offline_access",
+                    et.SSO_state)
+
+  return url
+
+}
+
 func (et *MyTesla) setchargelimitURL(id string) string{
 
   url := fmt.Sprintf("%s/api/1/vehicles/%s/command/set_charge_limit", TESLA_API_URL, id)
@@ -107,6 +135,16 @@ func (et *MyTesla) refreshtokenURL(id string, sec string, refreshtoken string) s
                     id, 
                     sec,
                     refreshtoken)
+
+  return url
+
+}
+
+func (et *MyTesla) ssorefreshtokenURL() string{
+
+  url := "https://auth.tesla.com/oauth2/v3/token"
+  //url := "http://localhost:3000/refreshtoken"
+
 
   return url
 
@@ -189,6 +227,39 @@ func New(dbName string) *MyTesla{
   t.dataRequestMapAdd("vehicle_state","vehicle_id", "Gets vehicle state data")
   t.dataRequestMapAdd("nearbycharging","vehicle_id", "Gets vehicle state data")
   t.dataRequestMapAdd("service_data","vehicle_id", "Gets service data")
+
+  // SSO setup stuff - begin
+  // note - i copied this directly from :
+  // github.com/uhthomas/tesla_exporter/cmd/login
+
+     // this doesn't have to be 9 bytes, or base64. Just preference.
+     var b [9]byte
+     if _, err := io.ReadFull(rand.Reader, b[:]); err != nil {
+             fmt.Errorf("rand state: %w", err)
+             return t // egc - probably not the right thing :)
+     }
+
+     t.SSO_state = base64.RawURLEncoding.EncodeToString(b[:])
+
+     var p [86]byte
+     if _, err := io.ReadFull(rand.Reader, p[:]); err != nil {
+             fmt.Errorf("rand challenge: %w", err)
+             return t // egc - probably not the right thing :)
+     }   
+
+     t.SSO_challenge = base64.RawURLEncoding.EncodeToString(p[:])
+     sum := sha256.Sum256([]byte(t.SSO_challenge))
+     t.SSO_challengeSum = base64.RawURLEncoding.EncodeToString(sum[:])
+
+/*
+fmt.Printf("sso_state: [%s]\n", t.SSO_state);
+fmt.Printf("sso_challenge: [%s]\n", t.SSO_challenge);
+fmt.Printf("sso_challengeSum: [%s]\n", t.SSO_challengeSum);
+*/
+
+  // SSO setup stuff - end
+
+
 
 
   return t
@@ -327,6 +398,84 @@ func (et *MyTesla) WakeCmd(id string) bool{
 
   logmsg.Print(logmsg.Error,"wake failed")
   return false
+
+}
+
+func (et *MyTesla) SSORefreshToken() bool{
+
+  // fmt.Println("wow - called SSORefreshToken")
+
+  dberr := et.GetSecrets()
+  if(!dberr){
+    logmsg.Print(logmsg.Error, "Yikes - DB error!.  Have you stored secrets?");
+    os.Exit(4);
+  }
+
+  // see if we already have an access token
+
+  status := et.GetOwner()
+
+  if(!status){
+    fmt.Println("Initial owner info include access tokens are missing - use importtoken command to fix")
+    os.Exit(4)
+  }
+
+  et.SSOrefreshtoken = restapi.NewPost("SSOrefreshtoken", et.ssorefreshtokenURL())
+
+  //et.SSOrefreshtoken.DebugOn()
+
+  et.SSOrefreshtoken.SetBearerAccessToken(et.accessToken)
+  //et.SSOrefreshtoken.HasInnerMap("response")
+
+  jsonstr := fmt.Sprintf("{\"grant_type\": \"refresh_token\", \"client_id\": \"ownerapi\", \"refresh_token\": \"%s\", \"scope\": \"openid email offline_access\" }", et.refreshToken)
+
+//fmt.Println(jsonstr)
+
+  et.SSOrefreshtoken.SetPostJson(jsonstr)
+
+  //et.SSOrefreshtoken.Dump()
+
+  if(et.SSOrefreshtoken.Send()){
+    if(et.debug){et.SSOrefreshtoken.Dump()}
+  }else{
+    logmsg.Print(logmsg.Error,"SSOrefreshtoken"," Failed ")
+    return false
+  }
+
+  //et.SSOrefreshtoken.Dump()
+
+  et.accessToken = et.SSOrefreshtoken.GetValueString("access_token")
+  et.refreshToken = et.SSOrefreshtoken.GetValueString("refresh_token")
+  expires := et.SSOrefreshtoken.GetValue("expires_in")
+  //expires := 2592000; // 30 days - tesla is sending back 300
+
+/*
+  fmt.Println("returned expires time:", expires)
+  fmt.Printf("expires is [%T]\n", expires)
+
+  fmt.Println("AccessToken:", et.accessToken)
+  fmt.Println("RefreshToken:", et.refreshToken)
+
+  fmt.Println("before ExpiresTime: ", et.expiresTime)
+  fmt.Println("before ExpiresTime: ", et.ExpiresTimeStr())
+*/
+
+  timeNow := time.Now()
+  created := timeNow.Unix()
+
+  et.expiresTime = int(created) + restapi.CastFloatToInt(expires)
+  //et.expiresTime = int(created) + int(expires)
+  
+
+/*
+  fmt.Println("after ExpiresTime: ", et.expiresTime)
+  fmt.Println("after ExpiresTime: ", et.ExpiresTimeStr())
+*/
+
+
+  et.AddOwner()
+
+  return true
 
 }
 
@@ -485,34 +634,199 @@ func (et *MyTesla) GetVehicleListCmd() bool{
 
 }
 
+func (et *MyTesla) ExpiresTimeStr() string {
+
+  var expireStr string = "nerd"
+  
+  expiresTime := time.Unix(int64(et.expiresTime), 0)
+
+  expireStr = fmt.Sprintf("%02d-%02d-%d %02d:%02d:%02d", 
+               expiresTime.Month(),expiresTime.Day(), expiresTime.Year(),
+             expiresTime.Hour(), expiresTime.Minute(), expiresTime.Second() )
+
+  return expireStr
+}
+
 func (et *MyTesla) DumpOwnerInfo(){
 
   et.Login() // the act of logging in will populate this info
 
-  expiresTime := time.Unix(int64(et.expiresTime), 0)
+  //expiresTime := time.Unix(int64(et.expiresTime), 0)
 
   fmt.Println("Owner table dump")
   fmt.Println("Email: ", et.email)
   fmt.Println("AccessToken: ", et.accessToken)
   fmt.Println("RefreshToken: ", et.refreshToken)
   fmt.Println("ExpiresTime: ", strconv.Itoa(et.expiresTime))
+  fmt.Println("ExpiresTime: ", et.ExpiresTimeStr())
+/*
   fmt.Println("ExpiresTime: ", fmt.Sprintf("%02d-%02d-%d %02d:%02d:%02d", 
                expiresTime.Month(),expiresTime.Day(), expiresTime.Year(),
              expiresTime.Hour(), expiresTime.Minute(), expiresTime.Second() ) )
+*/
 
   
 
 }
 
+func (et *MyTesla) ImportTokens() bool{
+
+  var filename string
+  var email string
+  var ok bool
+
+  fmt.Println("Import tokens from another authentication program/script")
+
+  timeNow := time.Now()
+
+  unixTime := timeNow.Unix()
+  // cheesy way of having non magic numbers - but are magic :)
+  one_hour := int(60 * 60)
+  one_day  := int(24 * one_hour)
+  num_days := int(40)
+
+  et.expiresTime = int(unixTime) + (one_day * num_days)
+
+
+  expiresTime := time.Unix(int64(et.expiresTime), 0)
+  fmt.Printf("UnixTime[%d] vs expiresTime[%d]\n", unixTime, et.expiresTime)
+
+  fmt.Println("TimeNow: ", fmt.Sprintf("%02d-%02d-%d %02d:%02d:%02d", 
+               timeNow.Month(),timeNow.Day(), timeNow.Year(),
+             timeNow.Hour(), timeNow.Minute(), timeNow.Second() ) )
+
+  fmt.Println("ExpiresTime: ", fmt.Sprintf("%02d-%02d-%d %02d:%02d:%02d", 
+             expiresTime.Month(),expiresTime.Day(), expiresTime.Year(),
+             expiresTime.Hour(), expiresTime.Minute(), expiresTime.Second() ) )
+
+
+  term := new(MyLogin) 
+
+  status := et.GetOwner()
+
+  logmsg.Print(logmsg.Info, "owner status: ", status)
+
+  if(!status){ // need email
+    email, ok = term.Prompt("Account Email", true);
+
+    if(!ok){
+      fmt.Println("Error getting email address");
+      return false
+    }
+
+    et.email = email
+
+  }
+
+
+  filename, ok = term.Prompt("Token response json filename:", false);
+
+  if(!ok){
+    fmt.Println("Error inputing token");
+    return false
+  }
+
+  fmt.Printf("File[%s]\n", filename)
+
+  // Open our jsonFile
+  jsonFile, err := os.Open(filename)
+
+  // if we os.Open returns an error then handle it
+  if err != nil {
+      fmt.Println(err)
+      return false
+  }
+
+  fmt.Println("Successfully Opened: ", filename)
+
+  defer jsonFile.Close()
+
+  byteValue, _ := ioutil.ReadAll(jsonFile)
+
+  var result map[string]interface{}
+  json.Unmarshal([]byte(byteValue), &result)
+
+
+  myMap := restapi.CastMap(result)
+
+  //fmt.Println(myMap)
+
+  tokenMap := restapi.CastMap(myMap["tokens"])
+
+  //fmt.Println(tokenMap)
+
+ // accessToken := restapi.CastString(tokenMap["owner_access_token"])
+  //ssoRefreshToken := restapi.CastString(tokenMap["sso_refresh_token"])
+
+  et.accessToken = restapi.CastString(tokenMap["owner_access_token"])
+  et.refreshToken = restapi.CastString(tokenMap["sso_refresh_token"])
+
+  
+  fmt.Println("accessToken: ", et.accessToken)
+  fmt.Println()
+  fmt.Println("refreshToken: ", et.refreshToken)
+
+/*
+  created := r.GetValue("created_at")
+  expires := r.GetValue("expires_in")
+  et.expiresTime = restapi.CastFloatToInt(created) + restapi.CastFloatToInt(expires)
+*/
+
+
+   et.myDB.AddOwner(et.email, et.accessToken, et.refreshToken, et.expiresTime);
+
+  return true
+}
+
+func (et *MyTesla) SSOLogin() bool{
+
+/*
+  var email1 string
+  var passwd1 string
+
+  fmt.Println("In new SSO Login logic")
+
+  email1 = "nerd";
+  passwd1 = "geek";
+*/
+
+  dberr := et.GetSecrets()
+  if(!dberr){
+    logmsg.Print(logmsg.Error, "Yikes - DB error!.  Have you stored secrets?");
+    os.Exit(4);
+  }
+
+  //fmt.Println(email1);
+  //fmt.Println(passwd1);
+
+  r := restapi.NewGet("authentication", et.SSOauthorizeURL())
+  r.DebugOn()
+
+  //r.Header.Add("User-Agent", "tesla_admin_cntl")
+
+  r.Dump()
+
+  if(r.Send()){
+  //  r.Dump()
+  }else{
+    logmsg.Print(logmsg.Error,"authentication failed")
+    return false
+  }
+
+
+
+  return true
+
+}
 
 func (et *MyTesla) Login() bool{
 
-  var email1 string
+  //var email1 string
   //var email2 string
-  var passwd1 string
+  //var passwd1 string
   //var passwd2 string
   //var reader *bufio.Reader
-  var ok bool
+  //var ok bool
 
   dberr := et.GetSecrets()
   if(!dberr){
@@ -554,9 +868,13 @@ func (et *MyTesla) Login() bool{
              expiresTime.Hour(), expiresTime.Minute(), expiresTime.Second() ) )
 */
 
-    if(int(unixTime) >= (et.expiresTime - const_sec_twoweek)){
+// egc 3/6/2021 - removed 2 week pad, tesla updated the exipre time to
+// 300 seconds (5minutes) so this forced a new token every since time
+// if(int(unixTime) >= (et.expiresTime - const_sec_twoweek)){
+ if(int(unixTime) >= et.expiresTime){
       logmsg.Print(logmsg.Info, "Time to refresh token")
-      status = et.RefreshToken(true)  
+      //status = et.RefreshToken(true)  
+      status = et.SSORefreshToken()  
     }
 
     if(status){
@@ -568,6 +886,12 @@ func (et *MyTesla) Login() bool{
   } // if status == true  Meaning we have data
 
 
+  logmsg.Print(logmsg.Warning,"AccessToken not found")
+  fmt.Println("AccessToken not found - run cheesy python script and import new token")
+
+  return false
+
+/*
   logmsg.Print(logmsg.Warning,"AccessToken not found")
 
   term := new(MyLogin)
@@ -602,6 +926,7 @@ func (et *MyTesla) Login() bool{
   et.AddOwner()
 
   return true
+*/
 }
 
 //////////////////////////

@@ -19,19 +19,19 @@ clean:
 	rm -f $(GOPATH)/bin/tesla_cmd
 	rm -f $(GOPATH)/bin/tesla_chargelevel
 
-$(TESLIB): file.json modelx.json $(LOGMSG) db.go tesla.go
+$(TESLIB): file.json modelx.json $(LOGMSG) db.go tesla.go login.go
 	go build
 	go install
 
-$(GOPATH)/bin/tesla_admin: example/tesla_admin.go tesla.go
+$(GOPATH)/bin/tesla_admin: example/tesla_admin.go tesla.go login.go
 	go build example/tesla_admin.go
 	mv tesla_admin $(GOPATH)/bin
 
-$(GOPATH)/bin/tesla_cmd: example/tesla_cmd.go tesla.go
+$(GOPATH)/bin/tesla_cmd: example/tesla_cmd.go tesla.go login.go
 	go build example/tesla_cmd.go
 	mv tesla_cmd $(GOPATH)/bin
 
-$(GOPATH)/bin/tesla_chargelevel: example/tesla_chargelevel.go tesla.go
+$(GOPATH)/bin/tesla_chargelevel: example/tesla_chargelevel.go tesla.go login.go
 	go build example/tesla_chargelevel.go
 	mv tesla_chargelevel $(GOPATH)/bin
 

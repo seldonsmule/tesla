@@ -22,6 +22,9 @@ func help(){
   fmt.Println("     getsecrets - Displays Tesla API secrets - needed for all APIs")
   fmt.Println("     updatesecrets - Updates Tesla API secrets - needed for all APIs")
   fmt.Println("     login - Sets up login info")
+  fmt.Println("     ssologin - New SSO Login - Sets up login info")
+  fmt.Println("     ssorefreshtoken - New SSO refresh the token logic")
+  fmt.Println("     importtokens - Inport from cheesy pyhton workaround script")
   fmt.Println("     refreshtoke - Refreshes token created via login")
   fmt.Println("     getowner - Shows owner details")
   fmt.Println("     delowner - Deletes owner details")
@@ -70,9 +73,27 @@ func main() {
 
   switch *cmdPtr {
 
+    case "ssorefreshtoken":
+      if(!myTL.SSORefreshToken()){
+        fmt.Println("Login failed")
+        os.Exit(4)
+      }
+
+    case "ssologin":
+      if(!myTL.SSOLogin()){
+        fmt.Println("Login failed")
+        os.Exit(4)
+      }
+
     case "login":
       if(!myTL.Login()){
         fmt.Println("Login failed")
+        os.Exit(4)
+      }
+
+    case "importtokens":
+      if(!myTL.ImportTokens()){
+        fmt.Println("ImportTokens failed")
         os.Exit(4)
       }
 

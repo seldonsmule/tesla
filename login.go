@@ -21,7 +21,7 @@ func (et *MyLogin) init(){
 
 }
 
-func (et *MyLogin) prompt(promptString string, hideText bool) (resultString string, worked bool){
+func (et *MyLogin) Prompt(promptString string, reType bool) (resultString string, worked bool){
 
   var response1 string
   var response2 string
@@ -30,16 +30,18 @@ func (et *MyLogin) prompt(promptString string, hideText bool) (resultString stri
 
   for ok = true; ok;  {
 
-      if(hideText){
-        fmt.Print("Enter ", promptString, ": ")
-        bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
-        response1 = string(bytePassword)
-        fmt.Println() // it's necessary to add a new line after user's input
+      reader = bufio.NewReader(os.Stdin)
+      fmt.Print("Enter ", promptString, ": ")
+      response1, _ = reader.ReadString('\n')
+      response1 = strings.TrimSuffix(response1,"\n")
+
+      if(!reType){
+        ok = false
+      }else{
 
         fmt.Print("Re-Enter ", promptString, ": ")
-        bytePassword, _ = terminal.ReadPassword(int(syscall.Stdin))
-        response2 = string(bytePassword)
-        fmt.Println() // it's necessary to add a new line after user's input
+        response2, _ = reader.ReadString('\n');
+        response2 = strings.TrimSuffix(response2,"\n")
 
         if(strings.Compare(response1,response2) != 0){
           fmt.Println(promptString, "did not match\n")
@@ -47,24 +49,9 @@ func (et *MyLogin) prompt(promptString string, hideText bool) (resultString stri
         }else{
           ok = false
         }
-      }else{
-        reader = bufio.NewReader(os.Stdin)
-        fmt.Print("Enter ", promptString, ": ")
-        response1, _ = reader.ReadString('\n')
-        response1 = strings.TrimSuffix(response1,"\n")
-        fmt.Print("Re-Enter ", promptString, ": ")
-        response2, _ = reader.ReadString('\n');
-        response2 = strings.TrimSuffix(response2,"\n")
-      }
-
-      if(strings.Compare(response1,response2) != 0){
-        fmt.Println(promptString, "did not match\n")
-        ok = true
-      }else{
-        ok = false
-      }
+      } // else reType
     
-  } 
+  } // for loop 
 
   return response1,true
 }
@@ -76,7 +63,7 @@ func (et *MyLogin) TerminalLogin(userIDName string, authName string) (userid str
   var passwd2 string
   var ok bool
 
-  email, ok = et.prompt("Email Address", false)
+  email, ok = et.Prompt("Email Address", true)
 
   for ok = true; ok;  {
 
