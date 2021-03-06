@@ -25,12 +25,18 @@ Gets the current values
 #### updates secrets
 Changes the current values
 
+## Usage recommendation
+Use tesla_admin (see below) for all management of your database of credentials and vehicles.  Then have your application using the tesla library do the rest of the work.  You can do it differenntly - but the initial login to get the accesstoken has been changed by tesla.  Instead, use the python script (in the python director) to get a json version of your initial accesstoken and ssorefreshtoken.  Store that in a file and then use the "tesla_admin -cmd importtoken" command to import into your database.
+
 
 ## Authentication
 Provides authentication.  Uses the user id and password of the tesla mobile app.  Will receive a token that is used for auth going forward. The class has an sqlite3 database to store this information. **It is recommend that you look at how to do a better job of securing this information.  This is just an example.**
 
 #### login
-If a valid OAuth token is not available, will prompt for user id and password
+Does not work anymore - Tesla changed their api.  See: https://tesla-api.timdorr.com/api-basics/authentication#post-https-auth-tesla-com-oauth-2-v-3-token-1
+
+for details.  You will have to use the script in the python directory to create your initial accesstoken.
+
 #### refreshtoken
 Refreshes the token so user id/password prompting is not required.  **login** above will auto call **refreshtoken** based on the time to live value in the token
 #### wake
