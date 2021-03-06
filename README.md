@@ -105,7 +105,9 @@ cmds:
      getsecrets - Displays Tesla API secrets - needed for all APIs
      updatesecrets - Updates Tesla API secrets - needed for all APIs
      login - Sets up login info
-     refreshtoke - Refreshes token created via login
+     refreshtoken - Refreshes token created via login
+     ssorefreshtoken - Refreshes token created via login
+     importtoken - Imports a json file from python script
      getowner - Shows owner details
      delowner - Deletes owner details
      setid - Stores vehicle ID for the cmds.  Requires -vid
