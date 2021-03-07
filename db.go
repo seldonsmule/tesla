@@ -188,7 +188,7 @@ func (edb *MyDatabase) AddOwner(email string,
                                       refreshToken string,
                                       expiresTime int ) (bool) {
 
-  logmsg.Print(logmsg.Info, 
+  logmsg.Print(logmsg.Debug03, 
                fmt.Sprintf("Email[%s] AccessToken[%s] RefreshToken[%s] Expires[%d]",
                            email, accessToken, refreshToken, expiresTime));
 
@@ -325,9 +325,12 @@ func (edb *MyDatabase) init(dbName string){
     logmsg.Print(logmsg.Error,"Unable to create table vehicle_id")
   }
 
-  if(!edb.createTable("tamper", "CREATE TABLE `tamper` (`machineid` VARCHAR(256) NULL) ") ){
-    logmsg.Print(logmsg.Error,"Unable to create table tamper")
+  if(!edb.createTable("homelink", "CREATE TABLE `homelink` (`setup` VARCHAR(256) NULL, `homelogic` INTEGER) ") ){
+    logmsg.Print(logmsg.Error,"Unable to create table homelink")
   }
+
+
+  edb.initHomeLink();
 
   id , _ := machineid.ProtectedID(edb.dbName);
 
@@ -371,6 +374,114 @@ func (edb *MyDatabase) init(dbName string){
 
 
 }
+
+func (edb *MyDatabase) SetHomeLink(state bool) bool{
+
+  logmsg.Print(logmsg.Info, "Setting Homelink state to:", state);
+
+  edb.handle.Exec("DELETE FROM homelink;")
+
+
+  edb.handle.Exec("INSERT INTO homelink (setup, homelogic) VALUES ($1, $2);",
+                     "yes",
+                     state)
+
+  return true
+}
+
+func (edb *MyDatabase) SetHomeLinkOn() bool{
+
+  return (edb.SetHomeLink(true))
+}
+
+func (edb *MyDatabase) SetHomeLinkOff() bool{
+
+  return (edb.SetHomeLink(false))
+}
+
+func (edb *MyDatabase) intToBool(value int) bool{
+
+  if(value == 1){
+    return true
+  }
+
+  return false
+}
+
+func (edb *MyDatabase) IsHomeLink() bool{
+
+  row, err := edb.handle.Query("select * from homelink limit 1;")
+
+  //_ = row // found a way to undo the variable since we don't really need it
+          // and we get an error otherwise.  I am sure some geek will comment
+          // on how bad this code is :)
+
+  if(err != nil){
+    logmsg.Print(logmsg.Error, "Error reading table homelink");
+    return false 
+  }
+
+  defer row.Close()
+
+  var setup string
+  var homelogic int
+
+  row.Next()
+
+  err = row.Scan(&setup, &homelogic)
+
+
+  logmsg.Print(logmsg.Info, "setup = ", setup)
+
+  if(setup == ""){
+    logmsg.Print(logmsg.Error, "setup not set")
+    edb.SetHomeLinkOn()
+    homelogic = 1
+  }
+
+  logmsg.Print(logmsg.Info, "Homelinklogic is:", edb.intToBool(homelogic));
+
+  return edb.intToBool(homelogic)
+}
+
+func (edb *MyDatabase) initHomeLink() bool{
+
+  row, err := edb.handle.Query("select * from homelink limit 1;")
+
+  //_ = row // found a way to undo the variable since we don't really need it
+          // and we get an error otherwise.  I am sure some geek will comment
+          // on how bad this code is :)
+
+  if(err != nil){
+    logmsg.Print(logmsg.Error, "Error reading table homelink");
+    return false 
+  }
+
+  defer row.Close()
+
+  var setup string
+  var homelogic int
+
+  row.Next()
+
+  err = row.Scan(&setup, &homelogic)
+
+
+  logmsg.Print(logmsg.Info, "setup = ", setup)
+
+  if(setup == ""){
+    logmsg.Print(logmsg.Error, "setup not set")
+
+    edb.SetHomeLinkOn()
+  }else{
+    logmsg.Print(logmsg.Info, "homelink logic already set")
+    edb.IsHomeLink() // forces a print to the log of current state
+  }
+
+
+  return true
+}
+
 
 func (db *MyDatabase) hello(){
 

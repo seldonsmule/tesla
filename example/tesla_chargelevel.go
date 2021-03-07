@@ -21,6 +21,9 @@ func help(){
   fmt.Println("     setchargelimit - Set charge limit for next charge. Use -limit")
   fmt.Println("     getchargelimit - Get charge limit for next charge")
   fmt.Println("     batterylevel - Get current battery level")
+  fmt.Println("     showegarage - Shows the garage test setting (on/off)")
+  fmt.Println("     enablegarage - Home test know if car is in garage")
+  fmt.Println("     disablegarage - Home test know if car is in garage")
   fmt.Println("     homesetto50 - If vehicle is home, set to 50% charge limit")
   fmt.Println("     homesetto80 - If vehicle is home, set to 80% charge limit")
   fmt.Println("     homecharge - If vehicle is home, use -lowlimit and -highlimit level to adjust next charge limit")
@@ -122,15 +125,26 @@ func main() {
         r := myTL.DataRequestMap["vehicle_state"]
         //r.Dump()
 
-        homelink := r.Obj.GetValue("homelink_nearby")
+        // check to see if the database has disabled the homelink
+        // test logic - if so we will skip worrying if the car in 
+        // at home and do the battery adjustments anyhow
 
-        if(homelink != true){
+        if(myTL.IsHomeLink()){
 
-          fmt.Println("Telsa not at home - not adjusting anything")
-          os.Exit(0)
+          homelink := r.Obj.GetValue("homelink_nearby")
+
+          if(homelink != true){
+
+            fmt.Println("Tesla not at home - not adjusting anything")
+            os.Exit(0)
+
+          }else{
+            fmt.Println("Tesla in Garage")
+          }
 
         }else{
-          fmt.Println("Tesla in Garage")
+          fmt.Println("Homelink override set - don't care if at home or not")
+          logmsg.Print(logmsg.Info, "Homelink override set - don't care if at home or not")
         }
 
       }
@@ -179,15 +193,22 @@ func main() {
       if(myTL.DataRequest(vid, "vehicle_state")){
         r := myTL.DataRequestMap["vehicle_state"]
 
-        homelink := r.Obj.GetValue("homelink_nearby")
+        if(myTL.IsHomeLink()){
 
-        if(homelink != true){
+          homelink := r.Obj.GetValue("homelink_nearby")
 
-          fmt.Println("Telsa not at home - not adjusting anything")
-          os.Exit(0)
+          if(homelink != true){
+
+            fmt.Println("Tesla not at home - not adjusting anything")
+            os.Exit(0)
+
+          }else{
+            fmt.Println("Tesla in Garage")
+          }
 
         }else{
-          fmt.Println("Tesla in Garage")
+          fmt.Println("Homelink override set - don't care if at home or not")
+          logmsg.Print(logmsg.Info, "Homelink override set - don't care if at home or not")
         }
 
       }
@@ -272,15 +293,21 @@ fmt.Printf("highlvl type: %T\n", highlvl)
         r := myTL.DataRequestMap["vehicle_state"]
         //r.Dump()
 
-        homelink := r.Obj.GetValue("homelink_nearby")
+        if(myTL.IsHomeLink()){
 
-        if(homelink != true){
+          homelink := r.Obj.GetValue("homelink_nearby")
 
-          fmt.Println("Telsa not at home - not adjusting anything")
-          os.Exit(0)
+          if(homelink != true){
 
+            fmt.Println("Tesla not at home - not adjusting anything")
+            os.Exit(0)
+
+          }else{
+            fmt.Println("Tesla in Garage")
+          }
         }else{
-          fmt.Println("Tesla in Garage")
+          fmt.Println("Homelink override set - don't care if at home or not")
+          logmsg.Print(logmsg.Info, "Homelink override set - don't care if at home or not")
         }
 
       }
@@ -321,6 +348,23 @@ fmt.Printf("highlvl type: %T\n", highlvl)
         fmt.Println("Charge limit: ", limit)
 
       }
+
+   case "enablegarage":
+    fmt.Println("enablegarage - Set Homelink logic to ON")
+    myTL.SetHomeLinkOn();
+
+   case "disablegarage":
+    fmt.Println("enablegarage - Set Homelink logic to OFF")
+    myTL.SetHomeLinkOff();
+
+   case "showgarage":
+     homestate := myTL.IsHomeLink()
+
+     if(homestate){
+       fmt.Println("HomeLink logic set to ON.  App will only change charging levels when at home.  This means if traveling, car will not be woken up to test");
+     }else{
+       fmt.Println("HomeLink logic set to OFF.  App will charging regardless of where the car is located.  This means car will be woken up everytime to test");
+     }
 
    case "batterylevel":
 

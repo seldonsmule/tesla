@@ -299,6 +299,18 @@ func (et *MyTesla) GetSecrets() (bool){
 
 }
 
+func (et *MyTesla) IsHomeLink() bool{
+  return et.myDB.IsHomeLink();
+}
+
+func (et *MyTesla) SetHomeLinkOn() bool{
+  return et.myDB.SetHomeLinkOn();
+}
+
+func (et *MyTesla) SetHomeLinkOff() bool{
+  return et.myDB.SetHomeLinkOff();
+}
+
 func (et *MyTesla) AddOwner(){
 
    et.myDB.AddOwner(et.email, et.accessToken, et.refreshToken, et.expiresTime);
