@@ -1,9 +1,7 @@
 # Makefile is esaier for me - i am sure others can do this better
 #
 
-pkg_dir = $(GOPATH)/pkg/darwin_amd64
-
-LOGMSG = $(pkg_dir)/github.com/seldonsmule/logmsg.a
+pkg_dir = $(GOPATH)/pkg/darwin_arm64
 
 TESLIB = $(pkg_dir)/github.com/seldonsmule/tesla.a
 
@@ -19,7 +17,7 @@ clean:
 	rm -f $(GOPATH)/bin/tesla_cmd
 	rm -f $(GOPATH)/bin/tesla_chargelevel
 
-$(TESLIB): file.json modelx.json $(LOGMSG) db.go tesla.go login.go
+$(TESLIB): file.json modelx.json db.go tesla.go login.go
 	go build
 	go install
 
@@ -35,25 +33,12 @@ $(GOPATH)/bin/tesla_chargelevel: example/tesla_chargelevel.go $(TESLIB)
 	go build example/tesla_chargelevel.go
 	mv tesla_chargelevel $(GOPATH)/bin
 
-$(LOGMSG): 
-	make deps
-
 deps:
 	go get github.com/seldonsmule/logmsg
 	go get github.com/seldonsmule/restapi
 	go get github.com/mattn/go-sqlite3
 	go get github.com/denisbrodbeck/machineid
 	go get golang.org/x/crypto/ssh/terminal
-
-rmdeps:
-	@rm -f $(LOGMSG)
-	@rm -rf $(GOPATH)/src/github.com/seldonsmule/logmsg
-	@rm -f $(pkg_dir)/github.com/seldonsmule/restapi.a
-	@rm -rf $(GOPATH)/src/github.com/seldonsmule/restapi
-	@rm -f $(pkg_dir)/github.com/mattn/go-sqlite3.a
-	@rm -rf $(GOPATH)/src/github.com/mattn/go-sqlite3
-	@rm -f $(pkg_dir)/github.com/denisbrodbeck/machineid.a
-	@rm -rf $(GOPATH)/src/github.com/denisbrodbeck/machineid
 
 getjson: file.json
 	@echo Built json file
