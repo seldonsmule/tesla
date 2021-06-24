@@ -10,6 +10,8 @@ import (
         "github.com/seldonsmule/tesla"
 )
 
+const MINAMP = 24
+
 func help(){
 
   fmt.Println("tesla_chargelevel - Simple command to run from cron to reest the charging levels")
@@ -219,6 +221,47 @@ func main() {
 
         battery := chargestate.Obj.GetValue("battery_level").(float64)
         limit   := chargestate.Obj.GetValue("charge_limit_soc").(float64)
+
+        current_max  := chargestate.Obj.GetValue("charge_current_request_max").(float64)
+        charger_power  := chargestate.Obj.GetValue("charger_power").(float64)
+        charger_voltage  := chargestate.Obj.GetValue("charger_voltage").(float64)
+        charger_actual_current  := chargestate.Obj.GetValue("charger_actual_current").(float64)
+        scheduled_charging_pending := chargestate.Obj.GetValue("scheduled_charging_pending")
+
+        fmt.Println("Current_Max: ", current_max)
+        fmt.Println("charger_power: ", charger_power)
+        fmt.Println("charger_voltage: ", charger_voltage)
+        fmt.Println("charger_actual_current: ", charger_actual_current)
+        fmt.Println("Charging_pending: ", scheduled_charging_pending)
+
+        // using the on/off scheduled pending flag that can be set
+        // in the car itself as a determination if we want to change
+        // the charge levels.  
+        //
+        // Meaning if off, then assume the driver knows we have a small
+        // circuit (less than 24 amps) and we need all the time we can
+        // to charge - so don't set it down to 50%!
+        //
+
+        if(scheduled_charging_pending != true){
+          fmt.Println("Scheduled charging is not set - skipping changing charge level")
+          os.Exit(0);
+        }else{
+
+          // now an extra safety check = are we on a big enough circuit
+          // at least 30amps (which gives us 24 usable amps
+
+          if(current_max < MINAMP){
+ 
+            fmt.Printf("Max Current (amps) is [%f].  Not enough for a fast charge - skipping changing charge level logic.  Needs to be at least [%d]\n", current_max, MINAMP)
+
+            os.Exit(0);
+
+          }
+
+        }
+
+
 
         if(limit == 100){
 
