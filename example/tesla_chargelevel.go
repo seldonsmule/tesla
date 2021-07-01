@@ -243,10 +243,12 @@ func main() {
         // to charge - so don't set it down to 50%!
         //
 
+/* 06-30-2021 - remoed this logic - it backfired
         if(scheduled_charging_pending != true){
           fmt.Println("Scheduled charging is not set - skipping changing charge level")
           os.Exit(0);
-        }else{
+        }else{ 
+*/
 
           // now an extra safety check = are we on a big enough circuit
           // at least 30amps (which gives us 24 usable amps
@@ -259,7 +261,9 @@ func main() {
 
           }
 
-        }
+/* 06-30-2021 - remoed this logic - it backfired
+        } // end of else scheduled_charging_pending
+*/
 
 
 
