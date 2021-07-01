@@ -156,3 +156,4 @@ go get golang.org/x/crypto/ssh/terminal
 
 go get github.com/denisbrodbeck/machineid
 
+# notes
