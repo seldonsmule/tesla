@@ -28,9 +28,10 @@ func help(){
   fmt.Println("     disablegarage - Home test know if car is in garage")
   fmt.Println("     homesetto50 - If vehicle is home, set to 50% charge limit")
   fmt.Println("     homesetto80 - If vehicle is home, set to 80% charge limit")
-  fmt.Println("     homecharge - If vehicle is home, use -lowlimit and -highlimit level to adjust next charge limit")
+  fmt.Println("     homecharge - If vehicle is home, use -lowlimit, -highlimit and -minamp level to adjust next charge limit")
   fmt.Println("             -lowlimit - Level to set to so car does not charge every night")
   fmt.Println("             -highlimit - Level to set to so car for next charge IF car is at low (or below) -lowlimit")
+  fmt.Println("             -minamp - Min amount of AMPs to use for homecharge.  Default is 24.  If not enough, then homecharge will not execute.  Set to zero to force use with even a 12amp circuit")
   fmt.Println("             NOTE: If set to 100 already and car is below - will skip adjustments.  If charged, will set to low limit")
 
 }
@@ -44,6 +45,9 @@ func main() {
   limitPtr := flag.String("limit", "notset", "charge limit - used with setchargelimit")
   lowlimitPtr := flag.String("lowlimit", "notset", "charge low limit - used with homecharge")
   highlimitPtr := flag.String("highlimit", "notset", "charge high limit - used with homecharge")
+  minampPtr := flag.Uint("minamp", MINAMP, "Min amps needed to use homecharge cmds")
+
+
 
   flag.Parse()
 
@@ -253,9 +257,9 @@ func main() {
           // now an extra safety check = are we on a big enough circuit
           // at least 30amps (which gives us 24 usable amps
 
-          if(current_max < MINAMP){
+          if(current_max < float64(*minampPtr)){
  
-            fmt.Printf("Max Current (amps) is [%f].  Not enough for a fast charge - skipping changing charge level logic.  Needs to be at least [%d]\n", current_max, MINAMP)
+            fmt.Printf("Max Current (amps) is [%f].  Not enough for a fast charge - skipping changing charge level logic.  Needs to be at least [%d]\n", current_max, *minampPtr)
 
             os.Exit(0);
 
