@@ -165,11 +165,61 @@ func (edb *MyDatabase) GetVehicleId(pId *string) (bool) {
   return true
 }
 
+func (edb *MyDatabase) GetVehicleVin(pVin *string) (bool) {
+
+  var id string
+  var gotRow bool
+
+  rows, err := edb.handle.Query("SELECT * FROM vin;");
+
+  if(err != nil){
+    logmsg.Print(logmsg.Error, "Error getting Vin Db error: ", err)
+    return false
+  }
+
+  defer rows.Close() // close the resource later 
+
+  gotRow = false;
+
+  for rows.Next(){
+//fmt.Println("in rows.Next loop")
+
+    gotRow = true;
+
+    err = rows.Scan(&id)
+
+    logmsg.Print(logmsg.Info, "Vin[",id,"]")
+
+    if(err != nil){
+      logmsg.Print(logmsg.Error, "Db error: ", err)
+      logmsg.Print(logmsg.Error, "Error getting Vin (not stored) Db error: ", err)
+      return false
+    }
+  }
+
+  if(!gotRow){
+    logmsg.Print(logmsg.Error, "Vin not set");
+    return false
+    
+  }
+
+  *pVin = id
+
+  return true
+}
+
 func (edb *MyDatabase) DelVehicleId() bool {
 
   //sql := fmt.Sprintf("DELETE FROM vehicle_id;")
 
   edb.handle.Exec("DELETE FROM vehicle_id;")
+
+  return true
+}
+
+func (edb *MyDatabase) DelVehicleVin() bool {
+
+  edb.handle.Exec("DELETE FROM vin;")
 
   return true
 }
@@ -219,6 +269,17 @@ func (edb *MyDatabase) AddVehicleId(id string) (bool) {
 //                     id)
 
   edb.handle.Exec("INSERT INTO vehicle_id (id) VALUES ($1);", id)
+
+  return true
+}
+
+func (edb *MyDatabase) AddVehicleVin(id string) (bool) {
+
+  // first delete any existing entry
+
+  edb.handle.Exec("DELETE FROM vin;")
+
+  edb.handle.Exec("INSERT INTO vin (id) VALUES ($1);", id)
 
   return true
 }
@@ -310,23 +371,27 @@ func (edb *MyDatabase) init(dbName string){
 
 
   if(!edb.createTable("api_details", "CREATE TABLE `api_details` (`client_id` VARCHAR(256) NULL, `client_secret` VARCHAR(256) NULL)") ){
-    logmsg.Print(logmsg.Error,"Unable to create table api_details")
+    logmsg.Print(logmsg.Warning,"Unable to create table api_details")
   }
 
   if(!edb.createTable("owner", "CREATE TABLE `owner` (`email` VARCHAR(64) NULL, `access_token` VARCHAR(256) NULL, `refresh_token` VARCHAR(256) NULL, `expires_in` DATE NULL) ") ){
-    logmsg.Print(logmsg.Error,"Unable to create table owner")
+    logmsg.Print(logmsg.Warning,"Unable to create table owner")
   }
 
   if(!edb.createTable("tamper", "CREATE TABLE `tamper` (`machineid` VARCHAR(256) NULL) ") ){
-    logmsg.Print(logmsg.Error,"Unable to create table tamper")
+    logmsg.Print(logmsg.Warning,"Unable to create table tamper")
   }
 
   if(!edb.createTable("vehicle_id", "CREATE TABLE `vehicle_id` (`id` VARCHAR(256) NULL) ") ){
-    logmsg.Print(logmsg.Error,"Unable to create table vehicle_id")
+    logmsg.Print(logmsg.Warning,"Unable to create table vehicle_id")
+  }
+
+  if(!edb.createTable("vin", "CREATE TABLE `vin` (`id` VARCHAR(256) NULL) ") ){
+    logmsg.Print(logmsg.Warning,"Unable to create table vin")
   }
 
   if(!edb.createTable("homelink", "CREATE TABLE `homelink` (`setup` VARCHAR(256) NULL, `homelogic` INTEGER) ") ){
-    logmsg.Print(logmsg.Error,"Unable to create table homelink")
+    logmsg.Print(logmsg.Warning,"Unable to create table homelink")
   }
 
 
@@ -369,7 +434,7 @@ func (edb *MyDatabase) init(dbName string){
     edb.handle.Exec("INSERT INTO tamper (machineid) VALUES($1);",
                              id)
   }else{
-    logmsg.Print(logmsg.Info, "we have the id")
+    logmsg.Print(logmsg.Info, "we have the mid")
   }
 
 

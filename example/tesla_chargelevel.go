@@ -24,8 +24,8 @@ func help(){
   fmt.Println("     getchargelimit - Get charge limit for next charge")
   fmt.Println("     batterylevel - Get current battery level")
   fmt.Println("     showegarage - Shows the garage test setting (on/off)")
-  fmt.Println("     enablegarage - Home test know if car is in garage")
-  fmt.Println("     disablegarage - Home test know if car is in garage")
+  fmt.Println("     enablegarage - Home test know if car is in garage - ON")
+  fmt.Println("     disablegarage - Home test know if car is in garage OFF")
   fmt.Println("     homesetto50 - If vehicle is home, set to 50% charge limit")
   fmt.Println("     homesetto80 - If vehicle is home, set to 80% charge limit")
   fmt.Println("     homecharge - If vehicle is home, use -lowlimit, -highlimit and -minamp level to adjust next charge limit")
@@ -35,6 +35,29 @@ func help(){
   fmt.Println("             NOTE: If set to 100 already and car is below - will skip adjustments.  If charged, will set to low limit")
 
 }
+
+
+func GetVehicleId(myTL *tesla.MyTesla) (bool, string) {
+
+  rtn1, vin := myTL.GetVehicleVin()
+
+  if(!rtn1){
+    logmsg.Print(logmsg.Error, "GetVehicleId failed - VIN not found in database: ", vin)
+    return false, "VIN not found in database"
+  }
+
+  rtn2, vid := myTL.GetVehicleIdFromVinCmd(vin)
+
+  if(!rtn2){
+    logmsg.Print(logmsg.Error, "GetVehicleId failed - VIN not found in list from Telsa: ", vin)
+    return false, "VIN not found in api response"
+  }
+
+
+  return true, vid
+
+}
+
 
 
 func main() {
@@ -73,17 +96,16 @@ func main() {
 
   myTL := tesla.New(dbName)
 
-
   switch *cmdPtr {
 
     case "wake":
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
         fmt.Printf("use tesla_admin -cmd setid -vid -rundir=%s to setup\n\n", *dirPtr)
         os.Exit(1);
       }
@@ -98,12 +120,12 @@ func main() {
         os.Exit(1);
       }
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
         os.Exit(1);
       }
 
@@ -116,12 +138,12 @@ func main() {
 
     case "homesetto50":
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
         os.Exit(1);
       }
 
@@ -185,12 +207,12 @@ func main() {
       highlvl, _ := strconv.ParseFloat(*highlimitPtr, 64)
 
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
         os.Exit(1);
       }
 
@@ -329,12 +351,12 @@ fmt.Printf("highlvl type: %T\n", highlvl)
 
     case "homesetto80":
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
         os.Exit(1);
       }
 
@@ -379,12 +401,12 @@ fmt.Printf("highlvl type: %T\n", highlvl)
 
     case "getchargelimit":
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
         os.Exit(1);
       }
 
@@ -405,10 +427,11 @@ fmt.Printf("highlvl type: %T\n", highlvl)
     myTL.SetHomeLinkOn();
 
    case "disablegarage":
-    fmt.Println("enablegarage - Set Homelink logic to OFF")
+    fmt.Println("disablegarage - Set Homelink logic to OFF")
     myTL.SetHomeLinkOff();
 
    case "showgarage":
+
      homestate := myTL.IsHomeLink()
 
      if(homestate){
@@ -419,12 +442,12 @@ fmt.Printf("highlvl type: %T\n", highlvl)
 
    case "batterylevel":
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has VIN been stored yet?")
         os.Exit(1);
       }
 
@@ -456,12 +479,12 @@ fmt.Printf("highlvl type: %T\n", highlvl)
       fallthrough
     case "vehicle_config":
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vid := GetVehicleId(myTL)
 
       if(rtn){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
         os.Exit(1);
       }
 

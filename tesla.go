@@ -319,7 +319,15 @@ func (et *MyTesla) AddOwner(){
 
 func (et *MyTesla) AddVehicleId(id string){
 
+fmt.Println("Get/Add VehicleId is being deprecated - use GetVehicleIdFromVinCmd")
+
    et.myDB.AddVehicleId(id);
+
+}
+
+func (et *MyTesla) AddVehicleVin(vin string){
+
+   et.myDB.AddVehicleVin(vin);
 
 }
 
@@ -334,8 +342,19 @@ func (et *MyTesla) GetVehicleId() (bool, string){
 
   var id string
 
+fmt.Println("Get/Add VehicleId is being deprecated - use GetVehicleIdFromVinCmd")
+
+
   return et.myDB.GetVehicleId(&id), id
   
+
+}
+
+func (et *MyTesla) GetVehicleVin() (bool, string){
+
+  var id string
+
+  return et.myDB.GetVehicleVin(&id), id
 
 }
 
@@ -610,6 +629,31 @@ func (et *MyTesla) GetVehicleCmd(id string) bool{
 
   return true
 
+}
+
+func (et *MyTesla) GetVehicleIdFromVinCmd(vin string) (bool, string) {
+
+  if(!et.GetVehicleListCmd() ){
+    logmsg.Print(logmsg.Error,"get vehicles list failed")
+    return false, "actionfailed"
+  }  
+
+  // ok - we have the list, lets see if we can find the vin
+
+fmt.Println("Looking for vin: ", vin)
+
+  count := et.VehicleList.GetValueInt("count")
+
+
+  for j:= 0; j < count; j++ {
+
+    if( et.VehicleList.GetArrayValueString(j,"vin") == vin){
+      return true, et.VehicleList.GetArrayValueString(j,"id_s")
+    }
+  
+  }
+
+  return false, "not found in list"
 }
 
 func (et *MyTesla) GetVehicleListCmd() bool{

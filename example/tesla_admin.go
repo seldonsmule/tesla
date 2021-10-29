@@ -30,6 +30,8 @@ func help(){
   fmt.Println("     delowner - Deletes owner details")
   fmt.Println("     setid - Stores vehicle ID for the cmds.  Requires -vid")
   fmt.Println("     getid - Display vehicle ID for the cmds")
+  fmt.Println("     setvin - Stores vehicle VIN for the cmds.  Requires -vid")
+  fmt.Println("     getvin - Display vehicle VIN for the cmds")
   fmt.Println("     getvehiclelist - Displays a list of vehicles and their IDs owned by the login")
   fmt.Println("     help - Display this help")
 
@@ -42,6 +44,7 @@ func main() {
   databasePtr := flag.String("dbname", "tesla.db", "Name of database")
   cmdPtr := flag.String("cmd", "help", "Command to run")
   vidPtr := flag.String("vid", "notset", "VehicleId")
+  vinPtr := flag.String("vin", "notset", "VehicleVin")
   clientidPtr := flag.String("clientid", "notset", "API Client ID")
   clientsecPtr := flag.String("clientsec", "notset", "API Client Secret")
 
@@ -63,6 +66,7 @@ func main() {
   logmsg.Print(logmsg.Info, "databasePtr = ", *databasePtr)
   logmsg.Print(logmsg.Info, "cmdPtr = ", *cmdPtr)
   logmsg.Print(logmsg.Info, "vidPtr = ", *vidPtr)
+  logmsg.Print(logmsg.Info, "vinPtr = ", *vinPtr)
   logmsg.Print(logmsg.Info, "clientidPtr = ", *clientidPtr)
   logmsg.Print(logmsg.Info, "clientsecPtr = ", *clientsecPtr)
   logmsg.Print(logmsg.Info, "tail = ", flag.Args())
@@ -103,6 +107,23 @@ func main() {
     case "updatescrets":
       myTL.UpdateSecrets()
 
+    case "setvin":
+      if(*vinPtr == "notset"){
+        fmt.Println("Missing Vehicle VIN.  Use -vin\n");
+        os.Exit(1);
+      }
+      myTL.AddVehicleVin(*vinPtr)
+
+    case "getvin":
+
+      rtn, vin := myTL.GetVehicleVin()
+
+      if(rtn){
+        fmt.Println("VehicleVin: ", vin)
+      }else{
+        fmt.Println("Error Retrieving VehicleVin, has it been stored yet?")
+      }
+
     case "setid":
       if(*vidPtr == "notset"){
         fmt.Println("Missing Vehicle ID.  Use -vid\n");
@@ -112,12 +133,18 @@ func main() {
 
     case "getid":
 
-      rtn, vid := myTL.GetVehicleId()
+      rtn, vin := myTL.GetVehicleVin()
+      if(!rtn){
+        fmt.Println("Error Retrieving VehicleID, Vin was not found: ", vin)
+        os.Exit(1);
+      }
 
-      if(rtn){
+      rtn2, vid := myTL.GetVehicleIdFromVinCmd(vin)
+
+      if(rtn2){
         fmt.Println("VehicleId: ", vid)
       }else{
-        fmt.Println("Error Retrieving VehicleID, has it been stored yet?")
+        fmt.Println("Error Retrieving VehicleID, not found: ", vid)
       }
    
 
