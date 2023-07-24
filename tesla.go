@@ -76,6 +76,8 @@ type MyTesla struct {
 
   DataRequestMap map[string]rest_cmds
 
+  VehicleData TeslaVehicleData
+
 }
 
 func (et *MyTesla) GetClientID() string{
@@ -547,6 +549,41 @@ func (et *MyTesla) SetChargeLimitCmd(id string, percent_value string) bool{
 
   }
 */
+
+  return true
+
+}
+
+func (et *MyTesla) GetVehicleData(id string) bool{
+
+  et.Login() // the act of logging in will populate this info
+
+  cmd := "vehicle_data"
+
+  r := et.DataRequestMap[cmd]
+
+  if(r.Obj == nil){ // not setup before
+    url := fmt.Sprintf("%s/api/1/vehicles/%s/%s", TESLA_API_URL, id, cmd)
+    r.Obj = restapi.NewGet(r.cmd, url) 
+    r.Obj.SetBearerAccessToken(et.accessToken)
+    r.Obj.HasInnerMap("response")
+  }
+
+  r.Obj.JsonOnly()
+
+  if(r.Obj.Send()){
+    //et.tmpobj.Dump()
+  }else{
+    logmsg.Print(logmsg.Error,cmd," Failed ", id)
+    return false
+  }
+
+  json.Unmarshal(r.Obj.BodyBytes, &et.VehicleData)
+  /*
+  fmt.Println("in tesla class - ID: ", et.VehicleData.Response.ID)
+  // why is display name not in the response?
+  fmt.Println("in tesla class - ID: ", et.VehicleData.Response.DisplayName)
+  */
 
   return true
 
