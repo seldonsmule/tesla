@@ -37,6 +37,81 @@ func help(){
 }
 
 
+type ChargeState struct {
+
+  BatteryLevel float64
+  ChargeLimitSoc float64
+  HomeLinkNearby bool
+  ChargeCurrentRequestMax float64
+  ChargerPower float64
+  ChargerVoltage float64
+  ChargerActualCurrent float64
+  ScheduledChargingPending bool
+  UsableBatteryLevel float64
+  EstBatteryRange float64
+  TimeToFullCharge float64
+}
+
+type VehicleState struct {
+
+  HomelinkNearby bool
+  CarVersion string
+
+}
+
+type VehicleData struct {
+  cs ChargeState
+  vs VehicleState
+}
+
+func GetVehicleData(myTL *tesla.MyTesla) (bool , VehicleData) {
+
+   var vd VehicleData
+
+   rtn, vid := GetVehicleId(myTL)
+
+   if(rtn){
+     fmt.Println("VehicleId: ", vid)
+   }else{
+     fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
+     os.Exit(1);
+   }
+
+   myTL.WakeCmd(vid)
+
+   if(myTL.DataRequest(vid, "vehicle_data")){
+     r := myTL.DataRequestMap["vehicle_data"]
+     //r.Dump()
+
+     var charge_state_map map[string]interface{}
+
+     charge_state_map = r.Obj.GetValue("charge_state").(map[string]interface{})
+
+     vd.cs.ChargeLimitSoc = charge_state_map["charge_limit_soc"].(float64)
+     vd.cs.BatteryLevel = charge_state_map["battery_level"].(float64)
+     vd.cs.ChargeCurrentRequestMax = charge_state_map["charge_current_request_max"].(float64)
+     vd.cs.ChargerPower = charge_state_map["charger_power"].(float64)
+     vd.cs.ChargerVoltage = charge_state_map["charger_voltage"].(float64)
+     vd.cs.ChargerActualCurrent = charge_state_map["charger_actual_current"].(float64)
+     vd.cs.ScheduledChargingPending = charge_state_map["scheduled_charging_pending"].(bool)
+     vd.cs.UsableBatteryLevel = charge_state_map["usable_battery_level"].(float64)
+     vd.cs.EstBatteryRange = charge_state_map["est_battery_range"].(float64)
+     vd.cs.TimeToFullCharge = charge_state_map["time_to_full_charge"].(float64)
+
+     var vehicle_state_map map[string]interface{}
+
+     vehicle_state_map = r.Obj.GetValue("vehicle_state").(map[string]interface{})
+
+     vd.vs.HomelinkNearby = vehicle_state_map["homelink_nearby"].(bool)
+     vd.vs.CarVersion = vehicle_state_map["car_version"].(string)
+
+
+   }
+
+  return true, vd
+}
+
+
 func GetVehicleId(myTL *tesla.MyTesla) (bool, string) {
 
   rtn1, vin := myTL.GetVehicleVin()
@@ -96,6 +171,33 @@ func main() {
 
   myTL := tesla.New(dbName)
 
+  rtn, vd := GetVehicleData(myTL)
+
+  if(!rtn){
+    fmt.Println("Error Retrieving Vehicle Data")
+    os.Exit(1);
+  }
+
+  /*
+  fmt.Println("ChargeLimitSoc (limit): ", vd.cs.ChargeLimitSoc)
+  fmt.Println("BatteryLevel: ", vd.cs.BatteryLevel)
+  fmt.Println("ChargeCurrentRequestMax: ", vd.cs.ChargeCurrentRequestMax)
+  fmt.Println("ChargerPower: ", vd.cs.ChargerPower)
+  fmt.Println("ChargerVoltage: ", vd.cs.ChargerVoltage)
+  fmt.Println("ChargerActualCurrent: ", vd.cs.ChargerActualCurrent)
+  fmt.Println("ScheduledChargingPending: ", vd.cs.ScheduledChargingPending)
+  fmt.Println("UsableBatteryLevel: ", vd.cs.UsableBatteryLevel)
+  fmt.Println("EstBatteryRange: ", vd.cs.EstBatteryRange)
+
+  fmt.Println("HomelinkNearby: ", vd.vs.HomelinkNearby)
+  fmt.Println("CarVersion: ", vd.vs.CarVersion)
+  */
+
+  /*
+  fmt.Println("exiting")
+  os.Exit(1);
+  */
+
   switch *cmdPtr {
 
     case "wake":
@@ -149,19 +251,13 @@ func main() {
 
       myTL.WakeCmd(vid)
 
-      if(myTL.DataRequest(vid, "vehicle_state")){
-        r := myTL.DataRequestMap["vehicle_state"]
-        //r.Dump()
+      // check to see if the database has disabled the homelink
+      // test logic - if so we will skip worrying if the car in 
+      // at home and do the battery adjustments anyhow
 
-        // check to see if the database has disabled the homelink
-        // test logic - if so we will skip worrying if the car in 
-        // at home and do the battery adjustments anyhow
+      if(myTL.IsHomeLink()){
 
-        if(myTL.IsHomeLink()){
-
-          homelink := r.Obj.GetValue("homelink_nearby")
-
-          if(homelink != true){
+          if(vd.vs.HomelinkNearby != true){
 
             fmt.Println("Tesla not at home - not adjusting anything")
             os.Exit(0)
@@ -170,26 +266,23 @@ func main() {
             fmt.Println("Tesla in Garage")
           }
 
-        }else{
-          fmt.Println("Homelink override set - don't care if at home or not")
-          logmsg.Print(logmsg.Info, "Homelink override set - don't care if at home or not")
-        }
-
+      }else{
+        fmt.Println("Homelink override set - don't care if at home or not")
+        logmsg.Print(logmsg.Info, "Homelink override set - don't care if at home or not")
       }
 
       if(myTL.SetChargeLimitCmd(vid, "50" )){
         fmt.Println("SetChargeLimiit worked")
       }
 
-      if(myTL.DataRequest(vid, "charge_state")){
-        r := myTL.DataRequestMap["charge_state"]
-        //r.Dump()
+      rtn, vd = GetVehicleData(myTL)
 
-        limit := r.Obj.GetValue("charge_limit_soc")
-
-        fmt.Println("Charge limit: ", limit)
-
+      if(!rtn){
+        fmt.Println("Error Retrieving Vehicle Data - second time")
+        os.Exit(1);
       }
+
+      fmt.Println("Charge limit: ", vd.cs.ChargeLimitSoc)
 
     case "homecharge":
     
@@ -218,136 +311,84 @@ func main() {
 
       myTL.WakeCmd(vid)
 
-      if(myTL.DataRequest(vid, "vehicle_state")){
-        r := myTL.DataRequestMap["vehicle_state"]
+      if(myTL.IsHomeLink()){
 
-        if(myTL.IsHomeLink()){
-
-          homelink := r.Obj.GetValue("homelink_nearby")
-
-          if(homelink != true){
+        if(vd.vs.HomelinkNearby != true){
 
             fmt.Println("Tesla not at home - not adjusting anything")
             os.Exit(0)
 
-          }else{
-            fmt.Println("Tesla in Garage")
-          }
-
         }else{
-          fmt.Println("Homelink override set - don't care if at home or not")
-          logmsg.Print(logmsg.Info, "Homelink override set - don't care if at home or not")
+          fmt.Println("Tesla in Garage")
         }
+      }else{
+        fmt.Println("Homelink override set - don't care if at home or not")
+        logmsg.Print(logmsg.Info, "Homelink override set - don't care if at home or not")
+      }
+
+      fmt.Println("BatteryLevel: ", vd.cs.BatteryLevel)
+      fmt.Println("ChargeLimitSoc (limit): ", vd.cs.ChargeLimitSoc)
+      fmt.Println("ChargeCurrentRequestMax: ", vd.cs.ChargeCurrentRequestMax)
+      fmt.Println("ChargerPower: ", vd.cs.ChargerPower)
+      fmt.Println("ChargerVoltage: ", vd.cs.ChargerVoltage)
+      fmt.Println("ChargerActualCurrent: ", vd.cs.ChargerActualCurrent)
+      fmt.Println("ScheduledChargingPending: ", vd.cs.ScheduledChargingPending)
+
+      // now an extra safety check = are we on a big enough circuit
+      // at least 30amps (which gives us 24 usable amps
+
+      if(vd.cs.ChargeCurrentRequestMax < float64(*minampPtr)){
+ 
+        fmt.Printf("Max Current (amps) is [%f].  Not enough for a fast charge - skipping changing charge level logic.  Needs to be at least [%d]\n", vd.cs.ChargeCurrentRequestMax, *minampPtr)
+
+        os.Exit(0);
 
       }
 
+      if(vd.cs.ChargeLimitSoc == 100){
 
-      if(myTL.DataRequest(vid, "charge_state")){
-        chargestate := myTL.DataRequestMap["charge_state"]
-
-        battery := chargestate.Obj.GetValue("battery_level").(float64)
-        limit   := chargestate.Obj.GetValue("charge_limit_soc").(float64)
-
-        current_max  := chargestate.Obj.GetValue("charge_current_request_max").(float64)
-        charger_power  := chargestate.Obj.GetValue("charger_power").(float64)
-        charger_voltage  := chargestate.Obj.GetValue("charger_voltage").(float64)
-        charger_actual_current  := chargestate.Obj.GetValue("charger_actual_current").(float64)
-        scheduled_charging_pending := chargestate.Obj.GetValue("scheduled_charging_pending")
-
-        fmt.Println("Current_Max: ", current_max)
-        fmt.Println("charger_power: ", charger_power)
-        fmt.Println("charger_voltage: ", charger_voltage)
-        fmt.Println("charger_actual_current: ", charger_actual_current)
-        fmt.Println("Charging_pending: ", scheduled_charging_pending)
-
-        // using the on/off scheduled pending flag that can be set
-        // in the car itself as a determination if we want to change
-        // the charge levels.  
-        //
-        // Meaning if off, then assume the driver knows we have a small
-        // circuit (less than 24 amps) and we need all the time we can
-        // to charge - so don't set it down to 50%!
-        //
-
-/* 06-30-2021 - remoed this logic - it backfired
-        if(scheduled_charging_pending != true){
-          fmt.Println("Scheduled charging is not set - skipping changing charge level")
-          os.Exit(0);
-        }else{ 
-*/
-
-          // now an extra safety check = are we on a big enough circuit
-          // at least 30amps (which gives us 24 usable amps
-
-          if(current_max < float64(*minampPtr)){
- 
-            fmt.Printf("Max Current (amps) is [%f].  Not enough for a fast charge - skipping changing charge level logic.  Needs to be at least [%d]\n", current_max, *minampPtr)
-
-            os.Exit(0);
-
-          }
-
-/* 06-30-2021 - remoed this logic - it backfired
-        } // end of else scheduled_charging_pending
-*/
-
-
-
-        if(limit == 100){
-
-          fmt.Println("Battery is set to 100")
-          if(battery >= 98){
-            fmt.Printf("Looks like we are fully charged[%f], letting lower logic go forth\n", battery)
-          }else{
-            fmt.Printf("Set to full charge, but battery is at [%f], exiting to let charge\n", battery)
-            break;
-          }
-
-        } // if 100
-
-
-/*
-fmt.Printf("battery type: %T\n", battery)
-fmt.Printf("limit type: %T\n", limit)
-fmt.Printf("lowlvl type: %T\n", lowlvl)
-fmt.Printf("highlvl type: %T\n", highlvl)
-*/
-
-
-        fmt.Println("Low charge level: ", lowlvl)
-        fmt.Println("High charge level: ", highlvl)
-
-        fmt.Println("Charge limit: ", limit)
-        fmt.Println("Battery Level: ", battery)
-
-        var newchargelimit string
-
-        if(battery <= lowlvl){
-          fmt.Println("hmm - looks like we need to charge.  Setting charge limit to high value")
-          newchargelimit = fmt.Sprintf("%.0f", highlvl)
+        fmt.Println("Battery is set to 100")
+        if(vd.cs.BatteryLevel >= 98){
+          fmt.Printf("Looks like we are fully charged[%f], letting lower logic go forth\n", vd.cs.BatteryLevel)
         }else{
-          fmt.Println("Battery is above lowlevel, no need to charge.  Setting charge limit to low value")
-          newchargelimit = fmt.Sprintf("%.0f", lowlvl)
+          fmt.Printf("Set to full charge, but battery is at [%f], exiting to let charge\n", vd.cs.BatteryLevel)
+          break;
         }
 
-        fmt.Println("New charge limit to set: ", newchargelimit)
+      } // if 100
 
-        if(myTL.SetChargeLimitCmd(vid, newchargelimit)){
-          fmt.Println("SetChargeLimiit worked")
-        }
 
-        if(myTL.DataRequest(vid, "charge_state")){
-          r := myTL.DataRequestMap["charge_state"]
-          //r.Dump()
+      fmt.Println("Low charge level: ", lowlvl)
+      fmt.Println("High charge level: ", highlvl)
 
-          limit := r.Obj.GetValue("charge_limit_soc")
+      fmt.Println("Charge limit: ", vd.cs.ChargeLimitSoc)
+      fmt.Println("Battery Level: ", vd.cs.BatteryLevel)
 
-          fmt.Println("Charge limit: ", limit)
+      var newchargelimit string
 
-        }
+      if(vd.cs.BatteryLevel <= lowlvl){
+        fmt.Println("hmm - looks like we need to charge.  Setting charge limit to high value")
+        newchargelimit = fmt.Sprintf("%.0f", highlvl)
+      }else{
+        fmt.Println("Battery is above lowlevel, no need to charge.  Setting charge limit to low value")
+        newchargelimit = fmt.Sprintf("%.0f", lowlvl)
+      }
 
-      } // end get charge_state
-   
+      fmt.Println("New charge limit to set: ", newchargelimit)
+
+      if(myTL.SetChargeLimitCmd(vid, newchargelimit)){
+        fmt.Println("SetChargeLimiit worked")
+      }
+
+      rtn, vd = GetVehicleData(myTL)
+
+      if(!rtn){
+        fmt.Println("Error Retrieving Vehicle Data - second time")
+        os.Exit(1);
+      }
+
+      fmt.Println("Charge limit: ", vd.cs.ChargeLimitSoc)
+
 
     case "homesetto80":
 
@@ -389,38 +430,18 @@ fmt.Printf("highlvl type: %T\n", highlvl)
         fmt.Println("SetChargeLimiit worked")
       }
 
-      if(myTL.DataRequest(vid, "charge_state")){
-        r := myTL.DataRequestMap["charge_state"]
-        //r.Dump()
+      rtn, vd = GetVehicleData(myTL)
 
-        limit := r.Obj.GetValue("charge_limit_soc")
-
-        fmt.Println("Charge limit: ", limit)
-
-      }
-
-    case "getchargelimit":
-
-      rtn, vid := GetVehicleId(myTL)
-
-      if(rtn){
-        fmt.Println("VehicleId: ", vid)
-      }else{
-        fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
+      if(!rtn){
+        fmt.Println("Error Retrieving Vehicle Data - second time")
         os.Exit(1);
       }
 
-      myTL.WakeCmd(vid)
+      fmt.Println("Charge limit: ", vd.cs.ChargeLimitSoc)
 
-      if(myTL.DataRequest(vid, "charge_state")){
-        r := myTL.DataRequestMap["charge_state"]
-        //r.Dump()
+    case "getchargelimit":
 
-        limit := r.Obj.GetValue("charge_limit_soc")
-
-        fmt.Println("Charge limit: ", limit)
-
-      }
+      fmt.Println("Charge limit: ", vd.cs.ChargeLimitSoc)
 
    case "enablegarage":
     fmt.Println("enablegarage - Set Homelink logic to ON")
@@ -442,28 +463,21 @@ fmt.Printf("highlvl type: %T\n", highlvl)
 
    case "batterylevel":
 
-      rtn, vid := GetVehicleId(myTL)
+     fmt.Println("Battery Level: ", vd.cs.BatteryLevel)
+     fmt.Println()
 
-      if(rtn){
-        fmt.Println("VehicleId: ", vid)
-      }else{
-        fmt.Println("Error Retrieving VehicleID, has VIN been stored yet?")
-        os.Exit(1);
-      }
+     fmt.Println("ChargeLimitSoc (limit): ", vd.cs.ChargeLimitSoc)
+     fmt.Println("ChargeCurrentRequestMax: ", vd.cs.ChargeCurrentRequestMax)
+     fmt.Println("ChargerPower: ", vd.cs.ChargerPower)
+     fmt.Println("ChargerVoltage: ", vd.cs.ChargerVoltage)
+     fmt.Println("ChargerActualCurrent: ", vd.cs.ChargerActualCurrent)
+     fmt.Println("ScheduledChargingPending: ", vd.cs.ScheduledChargingPending)
+     fmt.Println("UsableBatteryLevel: ", vd.cs.UsableBatteryLevel)
+     fmt.Println("EstBatteryRange: ", vd.cs.EstBatteryRange)
+     fmt.Println("TimeToFullCharge: ", vd.cs.TimeToFullCharge)
 
-      myTL.WakeCmd(vid)
-
-      if(myTL.DataRequest(vid, "charge_state")){
-        chargestate := myTL.DataRequestMap["charge_state"]
-        //r.Dump()
-
-        battery := chargestate.Obj.GetValue("battery_level")
-        limit   := chargestate.Obj.GetValue("charge_limit_soc")
-
-        fmt.Println("Charge limit: ", limit)
-        fmt.Println("Battery Level: ", battery)
-
-      }
+     fmt.Println("HomelinkNearby: ", vd.vs.HomelinkNearby)
+     fmt.Println("CarVersion: ", vd.vs.CarVersion)
 
     case "service_data":
       fallthrough

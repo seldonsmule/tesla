@@ -219,6 +219,7 @@ func New(dbName string) *MyTesla{
 
   t.VehicleList = nil
   t.DataRequestMap = make(map[string]rest_cmds)
+  t.dataRequestMapAdd("vehicle_data","vehicle_id", "Gets all the data")
   t.dataRequestMapAdd("charge_state","vehicle_id", "Gts charge state data")
   t.dataRequestMapAdd("climate_state","vehicle_id", "Gets climate state data")
   t.dataRequestMapAdd("drive_state","vehicle_id", "Gets drive state data")
@@ -558,7 +559,8 @@ func (et *MyTesla) DataRequest(id string, cmd string) bool{
   r := et.DataRequestMap[cmd]
 
   if(r.Obj == nil){ // not setup before
-    url := fmt.Sprintf("%s/api/1/vehicles/%s/data_request/%s", TESLA_API_URL, id, cmd)
+    //url := fmt.Sprintf("%s/api/1/vehicles/%s/data_request/%s", TESLA_API_URL, id, cmd)
+    url := fmt.Sprintf("%s/api/1/vehicles/%s/%s", TESLA_API_URL, id, cmd)
     r.Obj = restapi.NewGet(r.cmd, url) 
     r.Obj.SetBearerAccessToken(et.accessToken)
     r.Obj.HasInnerMap("response")
