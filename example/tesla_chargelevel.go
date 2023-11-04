@@ -23,6 +23,7 @@ func help(){
   fmt.Println("     setchargelimit - Set charge limit for next charge. Use -limit")
   fmt.Println("     getchargelimit - Get charge limit for next charge")
   fmt.Println("     batterylevel - Get current battery level")
+  fmt.Println("     stopcharging - Stop charging car")
   fmt.Println("     showegarage - Shows the garage test setting (on/off)")
   fmt.Println("     enablegarage - Home test know if car is in garage - ON")
   fmt.Println("     disablegarage - Home test know if car is in garage OFF")
@@ -494,6 +495,20 @@ func main() {
      }else{
        fmt.Println("HomeLink logic set to OFF.  App will charging regardless of where the car is located.  This means car will be woken up everytime to test");
      }
+
+   case "stopcharging":
+     fmt.Println("stopcharging")
+
+     rtn, vid := GetVehicleId(myTL)
+
+     if(rtn){
+       fmt.Println("VehicleId: ", vid)
+     }else{
+       fmt.Println("Error Retrieving VehicleID, has the VIN been stored yet?")
+       os.Exit(1);
+     }
+
+    myTL.StopChargingCmd(vid);
 
    case "batterylevel":
 

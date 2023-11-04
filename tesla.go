@@ -71,6 +71,7 @@ type MyTesla struct {
   SingleVehicle *restapi.Restapi
   Wake *restapi.Restapi
   Setchargelimit *restapi.Restapi
+  StopCharging *restapi.Restapi
   NearbyCharging *restapi.Restapi
   SSOrefreshtoken *restapi.Restapi
 
@@ -126,6 +127,14 @@ func (et *MyTesla) SSOauthorizeURL() string{
 func (et *MyTesla) setchargelimitURL(id string) string{
 
   url := fmt.Sprintf("%s/api/1/vehicles/%s/command/set_charge_limit", TESLA_API_URL, id)
+
+  return url
+
+}
+
+func (et *MyTesla) stopChargingURL(id string) string{
+
+  url := fmt.Sprintf("%s/api/1/vehicles/%s/command/charge_stop", TESLA_API_URL, id)
 
   return url
 
@@ -508,6 +517,28 @@ func (et *MyTesla) SSORefreshToken() bool{
 
 
   et.AddOwner()
+
+  return true
+
+}
+
+func (et *MyTesla) StopChargingCmd(id string) bool{
+
+  //var stateStr string
+
+  et.Login() // the act of logging in will populate this info
+
+  et.StopCharging = restapi.NewPost("StopCharging", et.stopChargingURL(id))
+
+  et.StopCharging.SetBearerAccessToken(et.accessToken)
+  et.StopCharging.HasInnerMap("response")
+
+  if(et.StopCharging.Send()){
+    if(et.debug){et.StopCharging.Dump()}
+  }else{
+    logmsg.Print(logmsg.Error,"StopCharging"," Failed ", id)
+    return false
+  }
 
   return true
 
